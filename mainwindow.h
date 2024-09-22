@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QSettings>
+#include <QSystemTrayIcon>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -18,6 +20,10 @@ public:
     ~MainWindow();
 
 private:
+    void iconActivated(QSystemTrayIcon::ActivationReason reason);
     Ui::MainWindow *ui;
+    QSystemTrayIcon* trayIcon;
+    // QTimer timer;
+    QSettings settings, settingsRunOnStartup;
 };
 #endif // MAINWINDOW_H

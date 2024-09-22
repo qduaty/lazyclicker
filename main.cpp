@@ -4,6 +4,8 @@
 #include <iostream>
 #include <windows.h>
 #include <helpers.h>
+#include <QSystemTrayIcon>
+#include <QMessageBox>
 using namespace std;
 
 map<HWND, RECT> windows;
@@ -88,13 +90,14 @@ int findCorners(RECT window, RECT monitor)
     return result;
 }
 
-RECT trimToMonitor(RECT window, RECT monitor)
+RECT trimAndMoveToMonitor(RECT window, RECT monitor)
 {
-    // TODO try to preserve as much window size as possible by moving it.
-    window.bottom = min(window.bottom, monitor.bottom);
-    window.left = max(window.left, monitor.left);
-    window.top = max(window.top, monitor.top);
-    window.right = min(window.right, monitor.right);
+    int maxw = monitor.right - monitor.left;
+    int maxh = monitor.bottom - monitor.top;
+    window.right -= max(0L, window.right - window.left - maxw);
+    window.bottom -= max(0L, window.bottom - window.top - maxh);
+    window.left -= max(0L, window.right - monitor.right);
+    window.top -= max(0L, window.bottom - monitor.bottom);
     return window;
 }
 
@@ -138,7 +141,7 @@ void arrangeCorners(const map<HMONITOR, map<corner, vector<HWND>>>& windowsOnMon
                 QPoint offset {i * hinc, i * vinc};
                 auto wrect = windows[vw[i]];
                 offset -= windowDistanceFromCorner(wrect, monitorRects[windowMonitor[vw[i]]], c);
-                // TODO this resets all windows to {0, 0}, don't renove
+                // TODO this resets all windows to {0, 0}, don't remove
                 // MoveWindow(vw[i], 0, 0, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
                 cout << "Would move window " << vw[i] << " to: " << wrect.left + offset.x() << ':' <<  wrect.top + offset.y() << endl;
                 MoveWindow(vw[i], wrect.left + offset.x(), wrect.top + offset.y(), wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
@@ -190,7 +193,7 @@ int main(int argc, char *argv[])
                     maxArea = area;
                 }
             }
-            if(maxArea) windows[w] = trimToMonitor(windows[w], monitorRects[windowMonitor[w]]);
+            if(maxArea) windows[w] = trimAndMoveToMonitor(windows[w], monitorRects[windowMonitor[w]]);
         }
     }
 
@@ -211,8 +214,26 @@ int main(int argc, char *argv[])
     // move windows so they are on their position in the right corner and resize them so they don't cover other corners
     arrangeCorners(windowsOrderInCorners, 40);
 
+    // To fit all windows in all corners
+    // 1. Calculate position for all corners the window may cover, ie. if it crosses the line of window corners in every monitor corner
+    // 2. In pairs of monitor corners (top-bottom) assign the higher value
+    // 3. When placing windows, always move corners horizontally but skip vertical step if there's no window assigned to a position
+    ;
+
     QApplication a(argc, argv);
+    a.setQuitOnLastWindowClosed(false);
     MainWindow w;
-    w.show();
+    if (!QSystemTrayIcon::isSystemTrayAvailable())
+    {
+        QMessageBox::critical(nullptr, qApp->applicationName(), QObject::tr("I couldn't detect any system tray on this system."));
+        return 1;
+    }
+    // w.setWindowFlags(Qt::Popup);
+    // w.show();
     return a.exec();
+
+
+
 }
+
+
