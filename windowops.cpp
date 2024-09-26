@@ -1,8 +1,24 @@
 #include "windowops.h"
-#include "helpers.h"
 #include <iostream>
+#include <psapi.h>
 
 using namespace std;
+string GetProcessNameFromHWND(HWND hwnd) {
+    DWORD processId;
+    GetWindowThreadProcessId(hwnd, &processId);
+
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId);
+    if (hProcess) {
+        char processName[MAX_PATH] = "<unknown>";
+
+        if (GetModuleBaseNameA(hProcess, NULL, processName, sizeof(processName)))
+            return processName;
+
+        CloseHandle(hProcess);
+    }
+    return "";
+}
+
 
 // https://stackoverflow.com/questions/7277366/why-does-enumwindows-return-more-windows-than-i-expected
 BOOL IsAltTabWindow(HWND hwnd)
@@ -45,7 +61,7 @@ BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
     RECT &rect = windows[hWnd];
     GetWindowRect(hWnd, &rect);
 
-    cout << hWnd << ": " << buffer << ':' << rect.left << ':' << rect.top << ':' << rect.right << ':' << rect.bottom << std::endl;
+    cout << hWnd << ": " << buffer << '(' << GetProcessNameFromHWND(hWnd) << ')' << ':' << rect.left << ':' << rect.top << ':' << rect.right << ':' << rect.bottom << std::endl;
     return TRUE;
 }
 
