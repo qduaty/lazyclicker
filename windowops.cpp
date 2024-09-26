@@ -61,7 +61,6 @@ size_t calculateRectArea(RECT rect)
     return (rect.bottom - rect.top) * (rect.right - rect.left);
 }
 
-
 int findCorners(RECT window, RECT monitor)
 {
     enum Side: int {none, top=1, right=2, bottom=4, left=8};
@@ -118,30 +117,59 @@ QPoint windowDistanceFromCorner(RECT wrect, RECT mrect, Corner c)
     return {wcorner.x() - mcorner.x(), wcorner.y() - mcorner.y()};
 }
 
-void arrangeCorners(const map<HMONITOR, map<Corner, vector<HWND>>> &windowsOnMonitors,
+void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> &windowsOrderInCorners,
                     const map<HMONITOR, RECT> &monitorRects,
-                    const map<HWND, RECT> &windows,
-                    const map<HWND, HMONITOR>& windowMonitor,
+                    map<HWND, RECT> &windowRects,
                     size_t unitSize)
 {
-    for(auto &[m, mcvw]: windowsOnMonitors)
-        for(auto &[c, vw]: mcvw)
+    for(auto &[mon, mcvw]: windowsOrderInCorners)
+    {
+        for(auto &[corner, windows]: mcvw)
         {
-            int hinc = c == Corner::topleft || c == Corner::bottomleft ? unitSize : -unitSize;
-            int vinc = c == Corner::bottomright || c == Corner::bottomleft ? unitSize : -unitSize;
-            int voffset0 = -vinc * vw.size();
-            SHOWDEBUG(vw.size());
-            for(int i = 0; i < vw.size(); i++)
+            for(int i = 0; i < windows.size(); i++)
             {
-                QPoint offset {i * hinc, i * vinc};
-                auto wrect = windows.at(vw[i]);
-                offset -= windowDistanceFromCorner(wrect, monitorRects.at(windowMonitor.at(vw[i])), c);
+                auto &wrect = windowRects.at(windows[i]);
+                auto mrect = monitorRects.at(mon);
                 // TODO this resets all windows to {0, 0}, don't remove
                 // MoveWindow(vw[i], 0, 0, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
-                cout << "Would move window " << vw[i] << " to: " << wrect.left + offset.x() << ':' <<  wrect.top + offset.y() << endl;
-                MoveWindow(vw[i], wrect.left + offset.x(), wrect.top + offset.y(), wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
+                RECT newRect;
+                if(corner & Corner::left)
+                {
+                    newRect.left = mrect.left + i * unitSize;
+                    newRect.right = wrect.right + newRect.left - wrect.left;
+                }
+                else
+                {
+                    newRect.right = mrect.right - i * unitSize;
+                    newRect.left = wrect.left + newRect.right - wrect.right;
+                }
+                if(corner & Corner::top)
+                {
+                    newRect.top = mrect.top + (windows.size() - i - 1) * unitSize;
+                    newRect.bottom = wrect.bottom + newRect.top - wrect.top;
+                }
+                else
+                {
+                    newRect.bottom = mrect.bottom - (windows.size() - i  - 1) * unitSize;
+                    newRect.top = wrect.top + newRect.bottom - wrect.bottom;
+                }
+                wrect = newRect;
+                cout << "Will move window " << windows[i] << '('<<i<<')'<<" to: " << wrect.left << ':' <<  wrect.top << endl;
+                MoveWindow(windows[i], wrect.left, wrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
             }
         }
+        // for(auto &[corner, windows]: mcvw)
+        // {
+        //     int hinc = corner == Corner::topleft || corner == Corner::bottomleft ? unitSize : -unitSize;
+        //     int vinc = corner == Corner::topleft || corner == Corner::topright ? unitSize : -unitSize;
+        //     int voffset0 = -vinc * windows.size();
+        //     for(int i = 0; i < windows.size(); i++)
+        //     {
+        //         cout << "Will move window " << windows[i] << " to: " << wrect.left << ':' <<  wrect.top << endl;
+        //         MoveWindow(windows[i], wrect.left, wrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
+        //     }
+        // }
+    }
 }
 
 HMONITOR findMainMonitor(HWND w, RECT &windowRect, const map<HMONITOR, RECT> &monitorRects)
@@ -154,13 +182,12 @@ HMONITOR findMainMonitor(HWND w, RECT &windowRect, const map<HMONITOR, RECT> &mo
     if (windowMonRects.size())
     {
         size_t maxArea = 0;
-        cout << "Monitors for window:" << w << endl;
+        // cout << "Monitors for window:" << w << endl;
         for (auto &[m, r] : windowMonRects)
         {
-            MONITORINFOEXA info{sizeof(MONITORINFOEXA)};
-            GetMonitorInfoA(m, &info);
-            cout << info.szDevice << ": " << r.left << ':' << r.top << ':' << r.right
-                 << ':' << r.bottom << std::endl;
+            // MONITORINFOEXA info{sizeof(MONITORINFOEXA)};
+            // GetMonitorInfoA(m, &info);
+            // cout << info.szDevice << ": " << r.left << ':' << r.top << ':' << r.right << ':' << r.bottom << std::endl;
 
             size_t area = calculateRectArea(r);
             if (area > maxArea) {
