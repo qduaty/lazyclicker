@@ -1,4 +1,5 @@
 #include "windowops.h"
+#include "helpers.h"
 #include <iostream>
 #include <psapi.h>
 #include <uxtheme.h>
@@ -211,28 +212,19 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
 
 HMONITOR findMainMonitor(HWND w, RECT &windowRect, const map<HMONITOR, RECT> &monitorRects)
 {
+    size_t maxArea = 0;
     HMONITOR monitor = {};
-    HDC dc = GetDC(w);
-    map<HMONITOR, RECT> windowMonRects;
-    EnumDisplayMonitors(dc, &windowRect, enumMonitorsProc, reinterpret_cast<LPARAM>(&windowMonRects));
-    ReleaseDC(w, dc);
-    if (windowMonRects.size())
+    for(auto &[m,r]: monitorRects)
     {
-        size_t maxArea = 0;
-        // cout << "Monitors for window:" << w << endl;
-        for (auto &[m, r] : windowMonRects)
+        RECT rect;
+        IntersectRect(&rect, &r, &windowRect);
+        size_t area = calculateRectArea(rect);
+        SHOWDEBUG(monitor, area);
+        if (area > maxArea)
         {
-            // MONITORINFOEXA info{sizeof(MONITORINFOEXA)};
-            // GetMonitorInfoA(m, &info);
-            // cout << info.szDevice << ": " << r.left << ':' << r.top << ':' << r.right << ':' << r.bottom << std::endl;
-
-            size_t area = calculateRectArea(r);
-            if (area > maxArea) {
-                monitor = m;
-                maxArea = area;
-            }
+            monitor = m;
+            maxArea = area;
         }
-        if (maxArea) windowRect = trimAndMoveToMonitor(windowRect, monitorRects.at(monitor));
     }
     return monitor;
 }
