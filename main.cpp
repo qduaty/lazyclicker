@@ -8,6 +8,9 @@
 #include <QMessageBox>
 
 using namespace std;
+//constexpr int taskbarHeight = 24;
+constexpr int taskbarHeight = 48;
+constexpr int unitSize = 40;
 
 int main(int argc, char *argv[])
 {
@@ -20,8 +23,7 @@ int main(int argc, char *argv[])
     cout << "Enumerating Monitors...\n";
     map<HMONITOR, RECT> monitorRects;
     EnumDisplayMonitors(nullptr, nullptr, enumMonitorsProc, reinterpret_cast<LPARAM>(&monitorRects));
-    constexpr int taskbarHeight = 48;
-    for(auto &[m,r]:monitorRects) r.bottom -= taskbarHeight;
+    for(auto &[m,r]: monitorRects) r.bottom -= taskbarHeight;
     map<HMONITOR, string> monitorNames;
     // just list monitor names
     for(auto &[m, r]: monitorRects)
@@ -48,25 +50,19 @@ int main(int argc, char *argv[])
     map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> windowsOrderInCorners;
     for(auto &[m, mw]: windowsOnMonitor)
     {
+        for(int i = 0; i < 4; i++) windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
         int i = 3;
         for(auto&[s, w]: mw)
         {
-            Corner corners[] {Corner::topleft, Corner::topright, Corner::bottomright, Corner::bottomleft};
-            Corner corner = corners[i%4];
+            Corner corner = Corner(i%4);
             windowsOrderInCorners[m][corner].push_back(w);
-            constexpr char *cornerNames[] = {"Corner::topleft", "Corner::topright", "Corner::bottomright", "Corner::bottomleft"};
+            constexpr const char *cornerNames[] = {"Corner::topleft", "Corner::topright", "Corner::bottomleft", "Corner::bottomright"};
             cout << w << ":" << cornerNames[i%4] << endl;
             i++;
         }
     }
 
-    arrangeWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects, 40);
-
-    // To fit all windows in all corners
-    // 1. Calculate position for all corners the window may cover, ie. if it crosses the line of window corners in every monitor corner
-    // 2. In pairs of monitor corners (top-bottom) assign the higher value
-    // 3. When placing windows, always move corners horizontally but skip vertical step if there's no window assigned to a position
-    ;
+    arrangeWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects, unitSize);
 
     QApplication a(argc, argv);
     a.setQuitOnLastWindowClosed(false);
