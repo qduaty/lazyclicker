@@ -35,8 +35,7 @@ void resetAllWindowPositions(const std::map<HMONITOR, std::map<flags<Corner, int
 /// move windows so they are on their position in the right corner and resize them so they don't cover other corners
 void arrangeWindowsInMonitorCorners(const std::map<HMONITOR, std::map<flags<Corner, int>, std::vector<HWND>>>& windowsOnMonitors,
                     const std::map<HMONITOR, RECT>& monitorRects,
-                    std::map<HWND, RECT>& windows,
-                    size_t unitSize);
+                    std::map<HWND, RECT>& windows);
 HMONITOR findMainMonitor(HWND w, RECT &windowRect, const std::map<HMONITOR, RECT> &monitorRects);
 
 #endif // WINDOWOPS_H

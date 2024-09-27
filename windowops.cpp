@@ -1,10 +1,10 @@
 #include "windowops.h"
 #include <iostream>
 #include <psapi.h>
+#include <uxtheme.h>
 
 using namespace std;
 
-constexpr int invisibleBorderSize = 6;
 constexpr int allowIncreaseByUnits = 2;
 
 string GetProcessNameFromHWND(HWND hwnd)
@@ -139,10 +139,12 @@ void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner, int>, vector<
 
 void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> &windowsOrderInCorners,
                     const map<HMONITOR, RECT> &monitorRects,
-                    map<HWND, RECT> &windowRects,
-                    size_t unitSize)
+                    map<HWND, RECT> &windowRects)
 
 {
+    HTHEME theme = nullptr;
+    int borderWidth = 0;
+    int unitSize = 16;
     for(auto &[mon, mcvw]: windowsOrderInCorners)
     {
         auto mrect = monitorRects.at(mon);
@@ -151,6 +153,12 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
         {
             for(int i = 0; i < windows.size(); i++)
             {
+                if(!theme)
+                {
+                    theme = OpenThemeData(windows[i], L"WINDOW");
+                    borderWidth = GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 3 / 2;
+                    unitSize = (GetThemeSysSize(theme, SM_CYSIZE) + GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 2) * 4 / 3;
+                }
                 auto &wrect = windowRects.at(windows[i]);
                 flags<Corner, int> otherCorner;
                 // 1°
@@ -164,34 +172,34 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 long dx = max(dx0, long(mcvw.at(otherCorner).size() * unitSize) - dy);
                 if(wrect.right - wrect.left + allowIncreaseByUnits * unitSize > mrect.right - mrect.left)
                 {
-                    wrect.left = mrect.left - invisibleBorderSize;
-                    wrect.right = mrect.right + invisibleBorderSize;
+                    wrect.left = mrect.left - borderWidth;
+                    wrect.right = mrect.right + borderWidth;
                 }
                 if(wrect.bottom - wrect.top + allowIncreaseByUnits * unitSize > mrect.bottom - mrect.top)
                 {
-                    wrect.top = mrect.top - invisibleBorderSize;
-                    wrect.bottom = mrect.bottom + invisibleBorderSize;
+                    wrect.top = mrect.top - borderWidth;
+                    wrect.bottom = mrect.bottom + borderWidth;
                 }
                 RECT newRect;
                 if(corner & Corner::right)
                 {
-                    newRect.right = mrect.right + invisibleBorderSize - i * unitSize;
-                    newRect.left = max(wrect.left + newRect.right - wrect.right, dx - invisibleBorderSize);
+                    newRect.right = mrect.right + borderWidth - i * unitSize;
+                    newRect.left = max(wrect.left + newRect.right - wrect.right, dx - borderWidth);
                 }
                 else
                 {
-                    newRect.left = mrect.left - invisibleBorderSize + i * unitSize;
-                    newRect.right = min(wrect.right + newRect.left - wrect.left, mrect.right - dx + invisibleBorderSize);
+                    newRect.left = mrect.left - borderWidth + i * unitSize;
+                    newRect.right = min(wrect.right + newRect.left - wrect.left, mrect.right - dx + borderWidth);
                 }
                 if(corner & Corner::bottom)
                 {
-                    newRect.bottom = mrect.bottom + invisibleBorderSize - (windows.size() - i  - 1) * unitSize;
-                    newRect.top = max(wrect.top + newRect.bottom - wrect.bottom, dy - invisibleBorderSize);
+                    newRect.bottom = mrect.bottom + borderWidth - (windows.size() - i  - 1) * unitSize;
+                    newRect.top = max(wrect.top + newRect.bottom - wrect.bottom, dy - borderWidth);
                 }
                 else
                 {
-                    newRect.top = mrect.top - invisibleBorderSize + (windows.size() - i - 1) * unitSize;
-                    newRect.bottom = min(wrect.bottom + newRect.top - wrect.top, mrect.bottom - dy + invisibleBorderSize);
+                    newRect.top = mrect.top - borderWidth + (windows.size() - i - 1) * unitSize;
+                    newRect.bottom = min(wrect.bottom + newRect.top - wrect.top, mrect.bottom - dy + borderWidth);
                 }
                 wrect = newRect;
                 cout << "Will move window " << windows[i] << '('<<i<<')'<<" to: " << newRect.left << ':' <<  newRect.top << ':' << newRect.right - mrect.right << ':' << newRect.bottom - mrect.bottom << endl;

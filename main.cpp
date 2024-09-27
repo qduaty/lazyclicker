@@ -8,9 +8,6 @@
 #include <QMessageBox>
 
 using namespace std;
-//constexpr int taskbarHeight = 24;
-constexpr int taskbarHeight = 48;
-constexpr int unitSize = 40;
 
 int main(int argc, char *argv[])
 {
@@ -23,13 +20,12 @@ int main(int argc, char *argv[])
     cout << "Enumerating Monitors...\n";
     map<HMONITOR, RECT> monitorRects;
     EnumDisplayMonitors(nullptr, nullptr, enumMonitorsProc, reinterpret_cast<LPARAM>(&monitorRects));
-    for(auto &[m,r]: monitorRects) r.bottom -= taskbarHeight;
     map<HMONITOR, string> monitorNames;
-    // just list monitor names
     for(auto &[m, r]: monitorRects)
     {
         MONITORINFOEXA info {sizeof(MONITORINFOEXA)};
         GetMonitorInfoA(m, &info);
+        r = info.rcWork;
         monitorNames[m] = info.szDevice;
         cout << info.szDevice << ": " << r.left << ':' << r.top << ':' << r.right << ':' << r.bottom << std::endl;
     }
@@ -62,8 +58,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    arrangeWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects, unitSize);
-
+    arrangeWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
+    return 0;
     QApplication a(argc, argv);
     a.setQuitOnLastWindowClosed(false);
     MainWindow w;
