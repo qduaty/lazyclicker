@@ -21,6 +21,9 @@ public:
 
 private:
     void iconActivated(QSystemTrayIcon::ActivationReason reason);
+    void registerForStartup();
+    void quitAndUnregister();
+
     Ui::MainWindow *ui;
     QSystemTrayIcon* trayIcon;
     // QTimer timer;

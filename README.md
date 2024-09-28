@@ -1,5 +1,5 @@
 # lazyclicker
-There is a feature on windows that allows to access windows with no
+There is a feature on Windows that allows to access windows with no
 clicking. It is available as a mouse accessibility option and is 
 equivalent to Linux' X-Mouse. However, when a window rectangle is
 inside a bigger one, it may get accidentally covered.
@@ -10,7 +10,9 @@ slightly reduced, windows that spanned multiple screens will be
 reduced to a single screen, and those that are almost full screen
 will be enlarged.
 ## Current status
-The action is bound to a single click on the tray icon.
+The app installs itself for startup and provides a menu option for 
+uninstall. Single click on the tray icon triggers windows 
+rearrangement.
 ## Prerequisities
 - Qt6
 ## TODO
