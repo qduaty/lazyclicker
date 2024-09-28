@@ -1,4 +1,4 @@
-# lazyclicker
+# lazyclicker <img src="mainicon.png" width=24>
 There is a feature on Windows that allows to access windows with 
 no clicking. It is available as a mouse accessibility option and 
 is equivalent to Linux' X-Mouse. However, when a window rectangle 
