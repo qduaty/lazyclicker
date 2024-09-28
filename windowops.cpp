@@ -1,5 +1,4 @@
 #include "windowops.h"
-#include "helpers.h"
 #include <iostream>
 #include <psapi.h>
 #include <uxtheme.h>
@@ -7,6 +6,7 @@
 using namespace std;
 
 constexpr int allowIncreaseByUnits = 2;
+map<HMONITOR, string> monitorNames;
 
 string GetProcessNameFromHWND(HWND hwnd)
 {
@@ -66,8 +66,12 @@ BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
 
     RECT &rect = windows[hWnd];
     GetWindowRect(hWnd, &rect);
-
-    cout << hWnd << ": " << buffer << '(' << GetProcessNameFromHWND(hWnd) << ')' << ':' << rect.left << ':' << rect.top << ':' << rect.right << ':' << rect.bottom << std::endl;
+    string processName = GetProcessNameFromHWND(hWnd);
+    if(processName == "ApplicationFrameHost.exe")
+        windows.erase(hWnd);
+    else
+        cout << hWnd << ": " << buffer << '(' << processName << ')' << ':' << rect.left << ':' << rect.top << ':'
+             << rect.right << ':' << rect.bottom << std::endl;
     return TRUE;
 }
 
@@ -203,7 +207,11 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                     newRect.bottom = min(wrect.bottom + newRect.top - wrect.top, mrect.bottom - dy + borderWidth);
                 }
                 wrect = newRect;
-                cout << "Will move window " << windows[i] << '('<<i<<')'<<" to: " << newRect.left << ':' <<  newRect.top << ':' << newRect.right - mrect.right << ':' << newRect.bottom - mrect.bottom << endl;
+                constexpr const char *cornerNames[] =
+                    {"Corner::topleft", "Corner::topright", "Corner::bottomleft", "Corner::bottomright"};
+                cout << "Will move window " << windows[i] << '(' << monitorNames[mon] << '@';
+                cout << cornerNames[int(corner)] << ':' << i << ')' <<" to relative: " << newRect.left << ':';
+                cout << newRect.top << ':' << newRect.right - mrect.right << ':' << newRect.bottom - mrect.bottom << endl;
                 MoveWindow(windows[i], newRect.left, newRect.top, newRect.right - newRect.left, newRect.bottom - newRect.top, TRUE);
             }
         }
@@ -219,7 +227,6 @@ HMONITOR findMainMonitor(HWND w, RECT &windowRect, const map<HMONITOR, RECT> &mo
         RECT rect;
         IntersectRect(&rect, &r, &windowRect);
         size_t area = calculateRectArea(rect);
-        SHOWDEBUG(monitor, area);
         if (area > maxArea)
         {
             monitor = m;
@@ -227,4 +234,54 @@ HMONITOR findMainMonitor(HWND w, RECT &windowRect, const map<HMONITOR, RECT> &mo
         }
     }
     return monitor;
+}
+
+void processAllWindows()
+{
+    cout << "Enumerating Monitors...\n";
+    map<HMONITOR, RECT> monitorRects;
+    EnumDisplayMonitors(nullptr, nullptr, enumMonitorsProc, reinterpret_cast<LPARAM>(&monitorRects));
+    for(auto &[m, r]: monitorRects)
+    {
+        MONITORINFOEXA info {sizeof(MONITORINFOEXA)};
+        GetMonitorInfoA(m, &info);
+        r = info.rcWork;
+        monitorNames[m] = info.szDevice;
+        cout << info.szDevice << ": " << r.left << ':' << r.top << ':' << r.right << ':' << r.bottom << std::endl;
+    }
+
+    cout << "Enumerating Windows...\n";
+    map<HWND, RECT> windowRects;
+    EnumWindows(enumWindowsProc, reinterpret_cast<LPARAM>(&windowRects));
+    // int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    // int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+    // find main monitor for each window
+    map<HWND, HMONITOR> windowMonitor;
+    for (auto &[w, r] : windowRects)
+    {
+        HMONITOR monitor = findMainMonitor(w, r, monitorRects);
+        // if(!monitor) monitor = monitorRects.rbegin()->first; // that would steal space for invisible windows, consider filtering them better because some fall into this category incorrectly
+        if(monitor) windowMonitor[w] = monitor;
+        // else
+        //     cout << "No monitor for window " << w << endl;
+    }
+
+    // sort windows according to size and distribute them in corners
+    map<HMONITOR, multimap<size_t, HWND>> windowsOnMonitor;
+    for(auto &[w, m]: windowMonitor) windowsOnMonitor[m].insert({calculateRectArea(windowRects[w]), w});
+    map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> windowsOrderInCorners;
+    for(auto &[m, mw]: windowsOnMonitor)
+    {
+        for(int i = 0; i < 4; i++) windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
+        int i = 3;
+        for(auto&[s, w]: mw)
+        {
+            // SHOWDEBUG(w);
+            windowsOrderInCorners[m][Corner(i%4)].push_back(w);
+            i++;
+        }
+    }
+
+    arrangeWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
 }

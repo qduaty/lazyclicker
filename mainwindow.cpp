@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 #include "helpers.h"
-
+#include "windowops.h"
 #include <QDir>
 
 MainWindow::MainWindow(QWidget *parent):
@@ -28,6 +28,9 @@ void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
     switch(reason)
     {
     case QSystemTrayIcon::ActivationReason::Trigger:
+        processAllWindows();
+        break;
+    case QSystemTrayIcon::ActivationReason::DoubleClick:
         if(isHidden()) show(); else hide();
         break;
     case QSystemTrayIcon::ActivationReason::Context:

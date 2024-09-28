@@ -10,12 +10,10 @@ slightly reduced, windows that spanned multiple screens will be
 reduced to a single screen, and those that are almost full screen
 will be enlarged.
 ## Current status
-Arranges existing windows on screens and exits.
+The action is bound to a single click on the tray icon.
 ## Prerequisities
 - Qt6
 ## TODO
-- move the functionality to a tray icon activation handler and/or
-a timeout
 - convert to MFC
 - perhaps add an option to skip the topright corner, so that windows 
 can be raised with clicking

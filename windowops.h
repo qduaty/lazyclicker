@@ -38,4 +38,6 @@ void arrangeWindowsInMonitorCorners(const std::map<HMONITOR, std::map<flags<Corn
                     std::map<HWND, RECT>& windows);
 HMONITOR findMainMonitor(HWND w, RECT &windowRect, const std::map<HMONITOR, RECT> &monitorRects);
 
+void processAllWindows();
+
 #endif // WINDOWOPS_H
