@@ -1,6 +1,5 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
-#include "helpers.h"
 #include "windowops.h"
 #include <QDir>
 #include <QMenu>
@@ -10,11 +9,10 @@ MainWindow::MainWindow(QWidget *parent):
     ui(new Ui::MainWindow),
     settings("HKEY_CURRENT_USER\\Software\\qduaty\\" + qApp->applicationName(), QSettings::NativeFormat),
     settingsRunOnStartup("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat),
-    trayIcon(new QSystemTrayIcon(this))
+    trayIcon(new QSystemTrayIcon(QIcon(":/mainicon.png"), this))
 {
     ui->setupUi(this);
-    SHOWDEBUG(QDir::current().absolutePath().toLocal8Bit().toStdString());
-    trayIcon->setIcon(QIcon("../../mainicon.png"));
+    trayIcon->setToolTip("Click to arrange windows");
     trayIcon->show();
     connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::iconActivated);
     auto trayIconMenu = new QMenu(this);

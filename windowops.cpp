@@ -2,6 +2,7 @@
 #include <iostream>
 #include <psapi.h>
 #include <uxtheme.h>
+#include <shellscalingapi.h>
 
 using namespace std;
 
@@ -147,11 +148,11 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                     map<HWND, RECT> &windowRects)
 
 {
-    HTHEME theme = nullptr;
     int borderWidth = 0;
     int unitSize = 16;
     for(auto &[mon, mcvw]: windowsOrderInCorners)
     {
+        HTHEME theme = nullptr;
         auto mrect = monitorRects.at(mon);
         // 1° distribute windows in corners
         for(auto &[corner, windows]: mcvw)
@@ -160,9 +161,11 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
             {
                 if(!theme)
                 {
+                    DEVICE_SCALE_FACTOR sf;
+                    GetScaleFactorForMonitor(mon, &sf);
                     theme = OpenThemeData(windows[i], L"WINDOW");
-                    borderWidth = GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 3 / 2;
-                    unitSize = (GetThemeSysSize(theme, SM_CYSIZE) + GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 2) * 4 / 3;
+                    borderWidth = GetThemeSysSize(theme, SM_CXPADDEDBORDER) * sf / 100;
+                    unitSize = (GetThemeSysSize(theme, SM_CYSIZE) + GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 2) * sf / 100;
                 }
                 auto &wrect = windowRects.at(windows[i]);
                 flags<Corner, int> otherCorner;
@@ -189,7 +192,7 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 if(corner & Corner::right)
                 {
                     newRect.right = mrect.right + borderWidth - i * unitSize;
-                    newRect.left = max(wrect.left + newRect.right - wrect.right, dx - borderWidth);
+                    newRect.left = max(wrect.left + newRect.right - wrect.right, mrect.left + dx - borderWidth);
                 }
                 else
                 {
@@ -199,7 +202,7 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 if(corner & Corner::bottom)
                 {
                     newRect.bottom = mrect.bottom + borderWidth - (windows.size() - i  - 1) * unitSize;
-                    newRect.top = max(wrect.top + newRect.bottom - wrect.bottom, dy - borderWidth);
+                    newRect.top = max(wrect.top + newRect.bottom - wrect.bottom, mrect.top + dy - borderWidth);
                 }
                 else
                 {

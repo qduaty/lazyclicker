@@ -1,6 +1,5 @@
 #include "mainwindow.h"
 #include <QApplication>
-#include "windowops.h"
 #include <windows.h>
 
 #include <QSystemTrayIcon>
