@@ -16,7 +16,6 @@ rearrangement.
 ## Prerequisities
 - Qt6
 ## TODO
-- make a nicer icon
 - convert to MFC
 - perhaps add an option to skip the topright corner, so that 
 windows can be raised with clicking
