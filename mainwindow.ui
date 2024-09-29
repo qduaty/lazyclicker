@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>131</width>
+    <width>179</width>
     <height>35</height>
    </rect>
   </property>
@@ -16,12 +16,12 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QFormLayout" name="formLayout">
     <item row="0" column="0" colspan="2">
-     <widget class="QCheckBox" name="checkBox">
+     <widget class="QCheckBox" name="arrangeWindowsPeriodically">
       <property name="toolTip">
        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Arrange windows around the top right corner, ie. where close buttons are. This requires bringing windows to the top with mouse hover (X-Mouse) turned on in WIndows Accessibility settings, to select windows there without closing them.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="text">
-       <string>Use topright corner</string>
+       <string>Arrange windows periodically</string>
       </property>
      </widget>
     </item>

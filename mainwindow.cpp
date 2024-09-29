@@ -5,13 +5,12 @@
 #include <QMenu>
 
 MainWindow::MainWindow(QWidget *parent):
-    QMainWindow(parent),
+    MainWindowWithSettings(parent),
     ui(new Ui::MainWindow),
-    settings("HKEY_CURRENT_USER\\Software\\qduaty\\" + qApp->applicationName(), QSettings::NativeFormat),
-    settingsRunOnStartup("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat),
     trayIcon(new QSystemTrayIcon(QIcon(":/mainicon.png"), this))
 {
     ui->setupUi(this);
+    loadSettings();
     trayIcon->setToolTip("Click to arrange windows");
     trayIcon->show();
     connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::iconActivated);
@@ -21,11 +20,20 @@ MainWindow::MainWindow(QWidget *parent):
     trayIconMenu->addAction(quitAction);
     trayIcon->setContextMenu(trayIconMenu);
     registerForStartup();
+    timer.setInterval(1000);
+    connect(&timer, &QTimer::timeout, processAllWindows);
 }
 
 MainWindow::~MainWindow()
 {
+    saveSettings();
     delete ui;
+}
+
+void MainWindow::on_arrangeWindowsPeriodically_toggled(bool value)
+{
+    if(value) timer.start();
+    else timer.stop();
 }
 
 void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
@@ -36,22 +44,19 @@ void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
         processAllWindows();
         break;
     case QSystemTrayIcon::ActivationReason::DoubleClick:
+    {
+        auto iconGeometry = trayIcon->geometry();
+        auto w = geometry().width();
+        auto h = geometry().height();
+        auto x = iconGeometry.x() + iconGeometry.width() / 2 - w / 2;
+        auto y = iconGeometry.y() - h;
+        setGeometry(x, y, w, h);
         if(isHidden()) show(); else hide();
         break;
+    }
     case QSystemTrayIcon::ActivationReason::Context:
         break;
     default:
         break;
     }
-}
-
-void MainWindow::registerForStartup() {
-    settingsRunOnStartup.setValue(QApplication::applicationName(),
-                                  QCoreApplication::applicationFilePath().replace('/', "\\"));
-}
-
-void MainWindow::quitAndUnregister() {
-    settingsRunOnStartup.remove(QApplication::applicationName());
-    settings.clear();
-    QCoreApplication::instance()->quit();
 }

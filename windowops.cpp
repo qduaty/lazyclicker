@@ -68,7 +68,9 @@ BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
     RECT &rect = windows[hWnd];
     GetWindowRect(hWnd, &rect);
     string processName = GetProcessNameFromHWND(hWnd);
-    if(processName == "ApplicationFrameHost.exe")
+    if(processName == "ApplicationFrameHost.exe") // an invisible window
+        windows.erase(hWnd);
+    else if(rect.left == -32000 && rect.top == -32000) // minimized
         windows.erase(hWnd);
     else
         cout << hWnd << ": " << buffer << '(' << processName << ')' << ':' << rect.left << ':' << rect.top << ':'
@@ -112,16 +114,18 @@ RECT trimAndMoveToMonitor(RECT windowRect, RECT monRect)
     return windowRect;
 }
 
-QPoint windowDistanceFromCorner(RECT wrect, RECT mrect, Corner c)
+int windowDistanceFromCorner(RECT wrect, RECT mrect, flags<Corner, int> c)
 {
     QPoint mcorner, wcorner;
-    bool isRight = int(c) & int(Corner::right);
+    bool isRight = c & Corner::right;
     mcorner.setX(isRight ? mrect.right : mrect.left);
     wcorner.setX(isRight ? wrect.right : wrect.left);
-    bool isBottom = int(c) & int(Corner::bottom);
+    bool isBottom = c & Corner::bottom;
     mcorner.setY(isBottom ? mrect.bottom : mrect.top);
     wcorner.setY(isBottom ? wrect.bottom : wrect.top);
-    return {wcorner.x() - mcorner.x(), wcorner.y() - mcorner.y()};
+    int distX = wcorner.x() - mcorner.x();
+    int distY = wcorner.y() - mcorner.y();
+    return sqrt(distX * distX + distY * distY);
 }
 
 void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> &windowsOrderInCorners,
@@ -221,24 +225,47 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
     }
 }
 
-HMONITOR findMainMonitor(HWND w, RECT &windowRect, const map<HMONITOR, RECT> &monitorRects)
+int diameter(const RECT& rect)
+{
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+    return sqrt(width * width + height * height);
+}
+
+pair<HMONITOR, Corner> findMainMonitorAndCorner(HWND w, RECT &wrect, const map<HMONITOR, RECT> &monitorRects)
 {
     size_t maxArea = 0;
-    HMONITOR monitor = {};
+    pair<HMONITOR, Corner> result = {};
     for(auto &[m,r]: monitorRects)
     {
         RECT rect;
-        IntersectRect(&rect, &r, &windowRect);
+        IntersectRect(&rect, &r, &wrect);
         size_t area = calculateRectArea(rect);
         if (area > maxArea)
         {
-            monitor = m;
+            result.first = m;
             maxArea = area;
         }
     }
-    return monitor;
+    if(result.first)
+    {
+        RECT mrect = monitorRects.at(result.first);
+        int minDist = diameter(mrect);
+        Corner selectedCorner;
+        for(int i = 0; i < 4; i++)
+        {
+            int dist = windowDistanceFromCorner(wrect, mrect, Corner(i));
+            if(dist < minDist)
+            {
+                minDist = dist;
+                selectedCorner = Corner(i);
+            }
+        }
+    }
+    return result;
 }
 
+map<HWND, RECT> existingWindowRects;
 void processAllWindows()
 {
     cout << "Enumerating Monitors...\n";
@@ -258,30 +285,51 @@ void processAllWindows()
     EnumWindows(enumWindowsProc, reinterpret_cast<LPARAM>(&windowRects));
     // int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
     // int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+    bool changed = false;
+    for(auto&[w,r]: existingWindowRects)
+    {
+        if(!windowRects.count(w))
+        {
+            changed = true;
+            break;
+        }
+    }
+    for(auto&[w,r]: windowRects)
+    {
+        if(!existingWindowRects.count(w))
+        {
+            changed = true;
+            break;
+        }
+    }
+
+    existingWindowRects = windowRects;
+
+    if(!changed) return;
 
     // find main monitor for each window
-    map<HWND, HMONITOR> windowMonitor;
+    map<HWND, pair<HMONITOR, Corner>> windowMonitor;
     for (auto &[w, r] : windowRects)
     {
-        HMONITOR monitor = findMainMonitor(w, r, monitorRects);
+        auto mc = findMainMonitorAndCorner(w, r, monitorRects);
         // if(!monitor) monitor = monitorRects.rbegin()->first; // that would steal space for invisible windows, consider filtering them better because some fall into this category incorrectly
-        if(monitor) windowMonitor[w] = monitor;
+        if(mc.first) windowMonitor[w] = mc;
         // else
         //     cout << "No monitor for window " << w << endl;
     }
 
     // sort windows according to size and distribute them in corners
-    map<HMONITOR, multimap<size_t, HWND>> windowsOnMonitor;
-    for(auto &[w, m]: windowMonitor) windowsOnMonitor[m].insert({calculateRectArea(windowRects[w]), w});
+    map<HMONITOR, multimap<size_t, pair<HWND, Corner>>> windowsOnMonitor;
+    for(auto &[w, mc]: windowMonitor) windowsOnMonitor[mc.first].insert({calculateRectArea(windowRects[w]), {w, mc.second}});
     map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> windowsOrderInCorners;
-    for(auto &[m, mw]: windowsOnMonitor)
+    for(auto &[m, mwc]: windowsOnMonitor)
     {
         for(int i = 0; i < 4; i++) windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
         int i = 3;
-        for(auto&[s, w]: mw)
+        for(auto&[s, wc]: mwc)
         {
             // SHOWDEBUG(w);
-            windowsOrderInCorners[m][Corner(i%4)].push_back(w);
+            windowsOrderInCorners[m][Corner(i%4)].push_back(wc.first);
             i++;
         }
     }
