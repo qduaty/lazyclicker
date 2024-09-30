@@ -324,12 +324,23 @@ void processAllWindows()
     map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> windowsOrderInCorners;
     for(auto &[m, mwc]: windowsOnMonitor)
     {
-        for(int i = 0; i < 4; i++) windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
-        int i = 3;
+        int numSmallWindows = 0;
+        auto monArea = calculateRectArea(monitorRects[m]);
+        for(auto&[s, wc]: mwc)
+        {
+            if(s < 0.9 * monArea) numSmallWindows++;
+            if(numSmallWindows > 1) break;
+        }
+        for(int i = 0; i < 4; i++)
+        {
+            windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
+        }
+        constexpr Corner corners[] {Corner::bottomleft, Corner::topleft, Corner::topright, Corner::bottomright};
+        int i = numSmallWindows > 1 ? 0 : 1;
         for(auto&[s, wc]: mwc)
         {
             // SHOWDEBUG(w);
-            windowsOrderInCorners[m][Corner(i%4)].push_back(wc.first);
+            windowsOrderInCorners[m][corners[i%4]].push_back(wc.first);
             i++;
         }
     }
