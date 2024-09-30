@@ -12,7 +12,8 @@ will be enlarged.
 ## Current status
 The app installs itself for startup and provides a menu option for 
 uninstall. Single click on the tray icon triggers windows 
-rearrangement.
+rearrangement. Alternatively, a configuration option allows to 
+schedule windows auto-arrangement every second.
 ## Prerequisities
 - Qt6
 ## TODO
