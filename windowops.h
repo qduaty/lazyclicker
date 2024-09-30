@@ -1,8 +1,8 @@
 #ifndef WINDOWOPS_H
 #define WINDOWOPS_H
-#include <QPoint>
 #include <windows.h>
 #include <map>
+#include <vector>
 
 BOOL IsAltTabWindow(HWND hwnd);
 BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam);

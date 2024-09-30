@@ -1,8 +1,10 @@
 #include "windowops.h"
 #include <iostream>
+#include <memory>
 #include <psapi.h>
 #include <uxtheme.h>
 #include <shellscalingapi.h>
+#include <string>
 
 using namespace std;
 
@@ -51,7 +53,9 @@ BOOL IsAltTabWindow(HWND hwnd)
     // Tool windows should not be displayed either, these do not appear in the
     // task bar.
     if(GetWindowLong(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) return FALSE;
-
+    string processName = GetProcessNameFromHWND(hwnd);
+    if(processName == "ApplicationFrameHost.exe")
+        return FALSE;
     return TRUE;
 }
 
@@ -59,26 +63,22 @@ BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
 {
     auto &windows = *reinterpret_cast<map<HWND, RECT>*>(lParam);
     if(!IsAltTabWindow(hWnd)) return TRUE;
+    if(IsIconic(hWnd)) return TRUE;
 
     int length = GetWindowTextLength(hWnd);
     if(!length) return TRUE;
-    char buffer[length + 1];
-    GetWindowTextA(hWnd, buffer, length + 1);
+    auto buffer = make_unique<char[]>(length + 1);
+    GetWindowTextA(hWnd, buffer.get(), length + 1);
 
     RECT &rect = windows[hWnd];
     GetWindowRect(hWnd, &rect);
     string processName = GetProcessNameFromHWND(hWnd);
-    if(processName == "ApplicationFrameHost.exe") // an invisible window
-        windows.erase(hWnd);
-    else if(rect.left == -32000 && rect.top == -32000) // minimized
-        windows.erase(hWnd);
-    else
-        cout << hWnd << ": " << buffer << '(' << processName << ')' << ':' << rect.left << ':' << rect.top << ':'
-             << rect.right << ':' << rect.bottom << std::endl;
+    cout << hWnd << ": " << buffer << '(' << processName << ')' << ':' << rect.left << ':' << rect.top << ':'
+         << rect.right << ':' << rect.bottom << std::endl;
     return TRUE;
 }
 
-WINBOOL enumMonitorsProc(HMONITOR monitor, HDC dc, LPRECT pRect, LPARAM lParam)
+BOOL CALLBACK enumMonitorsProc(HMONITOR monitor, HDC dc, LPRECT pRect, LPARAM lParam)
 {
     auto &monitorRects = *reinterpret_cast<map<HMONITOR, RECT>*>(lParam);
     monitorRects[monitor] = *pRect;
@@ -116,15 +116,15 @@ RECT trimAndMoveToMonitor(RECT windowRect, RECT monRect)
 
 int windowDistanceFromCorner(RECT wrect, RECT mrect, flags<Corner, int> c)
 {
-    QPoint mcorner, wcorner;
+    POINT mcorner, wcorner;
     bool isRight = c & Corner::right;
-    mcorner.setX(isRight ? mrect.right : mrect.left);
-    wcorner.setX(isRight ? wrect.right : wrect.left);
+    mcorner.x = isRight ? mrect.right : mrect.left;
+    wcorner.x = isRight ? wrect.right : wrect.left;
     bool isBottom = c & Corner::bottom;
-    mcorner.setY(isBottom ? mrect.bottom : mrect.top);
-    wcorner.setY(isBottom ? wrect.bottom : wrect.top);
-    int distX = wcorner.x() - mcorner.x();
-    int distY = wcorner.y() - mcorner.y();
+    mcorner.y = isBottom ? mrect.bottom : mrect.top;
+    wcorner.y = isBottom ? wrect.bottom : wrect.top;
+    int distX = wcorner.x - mcorner.x;
+    int distY = wcorner.y - mcorner.y;
     return sqrt(distX * distX + distY * distY);
 }
 
