@@ -17,7 +17,6 @@ int main(int argc, char *argv[])
         QMessageBox::critical(nullptr, qApp->applicationName(), QObject::tr("I couldn't detect any system tray on this system."));
         return 1;
     }
-    // w.setWindowFlags(Qt::Popup);
-    // w.show();
+    w.setWindowFlags(Qt::Popup);
     return a.exec();
 }

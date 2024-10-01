@@ -21,7 +21,7 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_arrangeWindowsPeriodically_toggled(bool);
+    void on_actionAuto_arrange_windows_toggled(bool);
 private:
     void iconActivated(QSystemTrayIcon::ActivationReason reason);
 

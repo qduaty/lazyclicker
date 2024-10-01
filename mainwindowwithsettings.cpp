@@ -19,6 +19,9 @@ void MainWindowWithSettings::saveSettings()
     settings.beginGroup("Preferences");
     for(auto child: findChildren<QCheckBox*>())
         settings.setValue(child->objectName(), child->isChecked());
+    for(auto child: findChildren<QAction*>())
+        if(child->isCheckable())
+            settings.setValue(child->objectName(), child->isChecked());
     for(auto child: findChildren<QRadioButton*>())
         settings.setValue(child->objectName(), child->isChecked());
     for(auto child: findChildren<QLineEdit*>())
@@ -47,6 +50,9 @@ void MainWindowWithSettings::loadSettings()
     {
         for(auto child: findChildren<QCheckBox*>())
             child->setChecked(settings.value(child->objectName(), false).toBool());
+        for(auto child: findChildren<QAction*>())
+            if(child->isCheckable())
+                child->setChecked(settings.value(child->objectName(), false).toBool());
         for(auto child: findChildren<QRadioButton*>())
             child->setChecked(settings.value(child->objectName(), false).toBool());
         for(auto child: findChildren<QLineEdit*>())

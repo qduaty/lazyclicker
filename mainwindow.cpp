@@ -15,9 +15,9 @@ MainWindow::MainWindow(QWidget *parent):
     trayIcon->show();
     connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::iconActivated);
     auto trayIconMenu = new QMenu(this);
-    auto quitAction = new QAction(tr("&Uninstall"), this);
-    connect(quitAction, &QAction::triggered, this, &MainWindow::quitAndUnregister);
-    trayIconMenu->addAction(quitAction);
+    connect(ui->actionQuit_and_unregister, &QAction::triggered, this, &MainWindow::quitAndUnregister);
+    trayIconMenu->addAction(ui->actionAuto_arrange_windows);
+    trayIconMenu->addAction(ui->actionQuit_and_unregister);
     trayIcon->setContextMenu(trayIconMenu);
     registerForStartup();
     timer.setInterval(1000);
@@ -30,7 +30,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::on_arrangeWindowsPeriodically_toggled(bool value)
+void MainWindow::on_actionAuto_arrange_windows_toggled(bool value)
 {
     if(value) timer.start();
     else timer.stop();
