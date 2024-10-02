@@ -3,8 +3,8 @@
 #include <memory>
 #include <psapi.h>
 #include <uxtheme.h>
-#include <shellscalingapi.h>
 #include <string>
+#include <shellscalingapi.h>
 
 using namespace std;
 
@@ -13,13 +13,14 @@ map<HMONITOR, string> monitorNames;
 
 string GetProcessNameFromHWND(HWND hwnd)
 {
+    char processName[MAX_PATH] = "<unknown>";
+//    if (GetWindowModuleFileNameA(hwnd, processName, MAX_PATH))
+  //      return processName;
     DWORD processId;
     GetWindowThreadProcessId(hwnd, &processId);
 
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId);
     if (hProcess) {
-        char processName[MAX_PATH] = "<unknown>";
-
         if (GetModuleBaseNameA(hProcess, NULL, processName, sizeof(processName)))
             return processName;
 
@@ -53,9 +54,7 @@ BOOL IsAltTabWindow(HWND hwnd)
     // Tool windows should not be displayed either, these do not appear in the
     // task bar.
     if(GetWindowLong(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) return FALSE;
-    string processName = GetProcessNameFromHWND(hwnd);
-    if(processName == "ApplicationFrameHost.exe")
-        return FALSE;
+
     return TRUE;
 }
 
@@ -63,7 +62,6 @@ BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
 {
     auto &windows = *reinterpret_cast<map<HWND, RECT>*>(lParam);
     if(!IsAltTabWindow(hWnd)) return TRUE;
-    if(IsIconic(hWnd)) return TRUE;
 
     int length = GetWindowTextLength(hWnd);
     if(!length) return TRUE;
@@ -73,8 +71,13 @@ BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
     RECT &rect = windows[hWnd];
     GetWindowRect(hWnd, &rect);
     string processName = GetProcessNameFromHWND(hWnd);
-    cout << hWnd << ": " << buffer << '(' << processName << ')' << ':' << rect.left << ':' << rect.top << ':'
-         << rect.right << ':' << rect.bottom << std::endl;
+    if(processName == "ApplicationFrameHost.exe") // an invisible window
+        windows.erase(hWnd);
+    else if(IsIconic(hWnd))
+        windows.erase(hWnd);
+    else
+        cout << hWnd << ": " << buffer << '(' << processName << ')' << ':' << rect.left << ':' << rect.top << ':'
+             << rect.right << ':' << rect.bottom << std::endl;
     return TRUE;
 }
 
