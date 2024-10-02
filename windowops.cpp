@@ -13,14 +13,13 @@ map<HMONITOR, string> monitorNames;
 
 string GetProcessNameFromHWND(HWND hwnd)
 {
-    char processName[MAX_PATH] = "<unknown>";
-//    if (GetWindowModuleFileNameA(hwnd, processName, MAX_PATH))
-  //      return processName;
     DWORD processId;
     GetWindowThreadProcessId(hwnd, &processId);
 
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId);
-    if (hProcess) {
+    if (hProcess)
+    {
+        char processName[MAX_PATH] = "<unknown>";
         if (GetModuleBaseNameA(hProcess, NULL, processName, sizeof(processName)))
             return processName;
 
@@ -91,19 +90,6 @@ BOOL CALLBACK enumMonitorsProc(HMONITOR monitor, HDC dc, LPRECT pRect, LPARAM lP
 size_t calculateRectArea(RECT rect)
 {
     return (rect.bottom - rect.top) * (rect.right - rect.left);
-}
-
-int findCorners(RECT window, RECT monitor)
-{
-    int sides = 0;
-    const float snapDistance = 0.1;
-    size_t maxX = snapDistance * (monitor.right - monitor.left);
-    size_t maxY = snapDistance * (monitor.bottom - monitor.top);
-    if(abs(window.bottom - monitor.bottom) < maxY) sides |= (1 << int(Corner::bottom));
-    if(abs(window.top - monitor.top) < maxY) sides |= (1 << int(Corner::top));
-    if(abs(window.left - monitor.left) < maxX) sides |= (1 << int(Corner::left));
-    if(abs(window.right - monitor.right) < maxX) sides |= (1 << int(Corner::right));
-    return sides;
 }
 
 RECT trimAndMoveToMonitor(RECT windowRect, RECT monRect)
@@ -271,6 +257,7 @@ pair<HMONITOR, Corner> findMainMonitorAndCorner(HWND w, RECT &wrect, const map<H
 map<HWND, pair<HMONITOR, Corner>> oldWindowMonitor;
 void processAllWindows()
 {
+    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
     cout << "Enumerating Monitors...\n";
     map<HMONITOR, RECT> monitorRects;
     EnumDisplayMonitors(nullptr, nullptr, enumMonitorsProc, reinterpret_cast<LPARAM>(&monitorRects));

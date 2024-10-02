@@ -19,7 +19,6 @@ template<typename E, typename I>struct flags {
     bool operator==(E x) const {return v == I(x);}
 };
 enum class Corner: int {top=0, left=0, topleft=top|left, right=1, topright=top|right, bottom=2, bottomleft=bottom|left, bottomright=bottom|right};
-int findCorners(RECT window, RECT monitor);
 RECT trimAndMoveToMonitor(RECT windowRect, RECT monRect);
 int windowDistanceFromCorner(RECT wrect, RECT mrect, flags<Corner, int> c);
 void resetAllWindowPositions(const std::map<HMONITOR, std::map<flags<Corner, int>, std::vector<HWND>>> &windowsOrderInCorners,
