@@ -268,7 +268,7 @@ pair<HMONITOR, Corner> findMainMonitorAndCorner(HWND w, RECT &wrect, const map<H
     return result;
 }
 
-map<HWND, RECT> existingWindowRects;
+map<HWND, pair<HMONITOR, Corner>> oldWindowMonitor;
 void processAllWindows()
 {
     cout << "Enumerating Monitors...\n";
@@ -288,27 +288,6 @@ void processAllWindows()
     EnumWindows(enumWindowsProc, reinterpret_cast<LPARAM>(&windowRects));
     // int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
     // int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-    bool changed = false;
-    for(auto&[w,r]: existingWindowRects)
-    {
-        if(!windowRects.count(w))
-        {
-            changed = true;
-            break;
-        }
-    }
-    for(auto&[w,r]: windowRects)
-    {
-        if(!existingWindowRects.count(w))
-        {
-            changed = true;
-            break;
-        }
-    }
-
-    existingWindowRects = windowRects;
-
-    if(!changed) return;
 
     // find main monitor for each window
     map<HWND, pair<HMONITOR, Corner>> windowMonitor;
@@ -320,6 +299,28 @@ void processAllWindows()
         // else
         //     cout << "No monitor for window " << w << endl;
     }
+
+    bool changed = false;
+    for(auto&[w,r]: oldWindowMonitor)
+    {
+        if(!windowMonitor.count(w) || windowMonitor.at(w).first != r.first)
+        {
+            changed = true;
+            break;
+        }
+    }
+    for(auto&[w,r]: windowMonitor)
+    {
+        if(!oldWindowMonitor.count(w) || oldWindowMonitor.at(w).first != r.first)
+        {
+            changed = true;
+            break;
+        }
+    }
+
+    oldWindowMonitor = windowMonitor;
+
+    if(!changed) return;
 
     // sort windows according to size and distribute them in corners
     map<HMONITOR, multimap<size_t, pair<HWND, Corner>>> windowsOnMonitor;
