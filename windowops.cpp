@@ -336,18 +336,17 @@ void processAllWindows()
     for(auto &[m, mwc]: windowsOnMonitor)
     {
         int numSmallWindows = 0;
+        int numBigWindows = 0;
         auto monArea = calculateRectArea(monitorRects[m]);
         for(auto&[s, wc]: mwc)
-        {
             if(s < 0.9 * monArea) numSmallWindows++;
-            if(numSmallWindows > 1) break;
-        }
+            else numBigWindows++;
         for(int i = 0; i < 4; i++)
         {
             windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
         }
         constexpr Corner corners[] {Corner::bottomleft, Corner::topleft, Corner::topright, Corner::bottomright};
-        int i = numSmallWindows > 1 ? 0 : 1;
+        int i = (numSmallWindows > 1 && numBigWindows > 0) ? 0 : 1;
         for(auto&[s, wc]: mwc)
         {
             // SHOWDEBUG(w);
