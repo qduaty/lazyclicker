@@ -16,6 +16,8 @@ TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
 TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
 TCHAR szApplicationToolTip[MAX_LOADSTRING];	    // the main window class name
 BOOL bDisable = FALSE;							// keep application state
+BOOL bAutoArrange = FALSE;
+
 
 // Forward declarations of functions included in this code module:
 ATOM				MyRegisterClass(HINSTANCE hInstance);
@@ -143,6 +145,7 @@ void Init()
 {
 	// user defined message that will be sent as the notification message to the Window Procedure 
 }
+
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -179,8 +182,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					uFlag |= MF_GRAYED;
 				}
-				InsertMenu(hPopMenu,0xFFFFFFFF,uFlag,IDM_TEST2,_T("Test 2")); // Test 2
-				InsertMenu(hPopMenu,0xFFFFFFFF,uFlag,IDM_TEST1,_T("Test 1")); // Test 1				
+				InsertMenu(hPopMenu,0xFFFFFFFF,uFlag,IDM_AUTO_ARRANGE,_T("Auto arrange windows")); // Test 1				
 				InsertMenu(hPopMenu,0xFFFFFFFF,MF_SEPARATOR,IDM_SEP,_T("SEP"));				
 				if ( bDisable == TRUE )
 				{
@@ -199,6 +201,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		}
 		break;
+//	case WM_CREATE:
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);
 		wmEvent = HIWORD(wParam);
@@ -208,11 +211,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			case IDM_ABOUT:
 				DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
 				break;
-			case IDM_TEST1:
-				MessageBox(NULL,_T("This is a test for menu Test 1"),_T("Test 1"),MB_OK);
-				break;
-			case IDM_TEST2:
-				MessageBox(NULL,_T("This is a test for menu Test 2"),_T("Test 2"),MB_OK);
+			case IDM_AUTO_ARRANGE:
+				bAutoArrange = !bAutoArrange;
+				CheckMenuItem(hPopMenu, IDM_AUTO_ARRANGE, bAutoArrange ? MF_CHECKED : MF_UNCHECKED);
 				break;
 			case IDM_DISABLE:
 				bDisable = TRUE;

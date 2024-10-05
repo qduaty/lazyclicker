@@ -24,6 +24,7 @@
     <RootNamespace>SysTrayDemo</RootNamespace>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>lazyclicker</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -159,17 +160,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\windowops.cpp" />
-    <ClCompile Include="SysTrayDemo.cpp" />
+    <ClCompile Include="lazyclicker.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\windowops.h" />
     <ClInclude Include="Resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\..\bitmap1.bmp" />
+    <Image Include="..\..\bmp00001.bmp" />
     <Image Include="..\..\mainicon2.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="SysTrayDemo.rc" />
+    <ResourceCompile Include="lazyclicker.rc" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />

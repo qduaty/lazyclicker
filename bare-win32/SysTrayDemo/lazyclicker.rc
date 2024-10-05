@@ -30,6 +30,16 @@ LANGUAGE LANG_POLISH, SUBLANG_DEFAULT
 // remains consistent on all systems.
 IDI_LAZYCLICKER         ICON                    "..\\..\\mainicon2.ico"
 
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_CHECKED             BITMAP                  "..\\..\\bitmap1.bmp"
+
+IDB_UNCHECKED           BITMAP                  "..\\..\\bmp00001.bmp"
+
 #endif    // Polski (Polska) resources
 /////////////////////////////////////////////////////////////////////////////
 
@@ -51,8 +61,7 @@ BEGIN
     POPUP "SysTrayMenu"
     BEGIN
         MENUITEM "&About ...",                  IDM_ABOUT
-        MENUITEM "Test 1",                      IDM_TEST1
-        MENUITEM "Test 2",                      IDM_TEST2
+        MENUITEM "Auto arrange",                IDM_AUTO_ARRANGE
         MENUITEM SEPARATOR
         MENUITEM "Enable",                      IDM_ENABLE
         MENUITEM "Disable",                     IDM_DISABLE
@@ -128,8 +137,8 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_APP_TITLE           "SysTrayDemo"
-    IDS_APPTOOLTIP          "SysTray Demo"
+    IDS_APP_TITLE           "lazyclicker"
+    IDS_APPTOOLTIP          "Click to arrange windows"
     IDC_SYSTRAYDEMO         "SYSTRAYDEMO"
 END
 
