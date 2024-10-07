@@ -167,8 +167,6 @@
     <ClInclude Include="Resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\bitmap1.bmp" />
-    <Image Include="..\..\bmp00001.bmp" />
     <Image Include="..\..\mainicon2.ico" />
   </ItemGroup>
   <ItemGroup>
