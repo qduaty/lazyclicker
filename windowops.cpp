@@ -205,10 +205,10 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 wrect = newRect;
                 constexpr const char *cornerNames[] =
                     {"Corner::topleft", "Corner::topright", "Corner::bottomleft", "Corner::bottomright"};
-                cout << "Will move window " << windows[i] << '(' << monitorNames[mon] << '@';
-                cout << cornerNames[int(corner)] << ':' << i << ')' <<" to relative: " << newRect.left << ':';
-                cout << newRect.top << ':' << newRect.right - mrect.right << ':' << newRect.bottom - mrect.bottom << endl;
-                MoveWindow(windows[i], newRect.left, newRect.top, newRect.right - newRect.left, newRect.bottom - newRect.top, TRUE);
+                cout << "Moving window " << windows[i] << '(' << monitorNames[mon] << '@';
+                cout << cornerNames[int(corner)] << ':' << i << ')' <<" to relative: " << newRect.left - mrect.left << ':';
+                cout << newRect.top - mrect.top << ':' << newRect.right - mrect.right << ':' << newRect.bottom - mrect.bottom << '[';
+                cout << MoveWindow(windows[i], newRect.left, newRect.top, newRect.right - newRect.left, newRect.bottom - newRect.top, TRUE) << ']' << endl;
             }
         }
     }
