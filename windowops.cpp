@@ -10,6 +10,7 @@ using namespace std;
 
 constexpr int allowIncreaseByUnits = 2;
 map<HMONITOR, string> monitorNames;
+map<HWND, tuple<HMONITOR, Corner, RECT>> oldWindowMonitor;
 
 string GetProcessNameFromHWND(HWND hwnd)
 {
@@ -171,12 +172,20 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 // 3°
                 otherCorner = corner ^ int(Corner::bottomright);
                 long dx = max(dx0, long(mcvw.at(otherCorner).size() * unitSize) - dy);
-                if(wrect.right - wrect.left + allowIncreaseByUnits * unitSize > mrect.right - mrect.left)
+                long maxIncreaseX = allowIncreaseByUnits * unitSize;
+                long maxIncreaseY = maxIncreaseX;
+                if(oldWindowMonitor.count(windows[i])) 
+                {
+                    RECT oldWrect = get<2>(oldWindowMonitor[windows[i]]);
+                    maxIncreaseX = max(maxIncreaseX, oldWrect.right - oldWrect.left - (wrect.right - wrect.left));
+                    maxIncreaseY = max(maxIncreaseY, oldWrect.bottom - oldWrect.top - (wrect.bottom - wrect.top));
+                }
+                if(wrect.right - wrect.left + maxIncreaseX > mrect.right - mrect.left)
                 {
                     wrect.left = mrect.left - borderWidth;
                     wrect.right = mrect.right + borderWidth;
                 }
-                if(wrect.bottom - wrect.top + allowIncreaseByUnits * unitSize > mrect.bottom - mrect.top)
+                if(wrect.bottom - wrect.top + maxIncreaseY > mrect.bottom - mrect.top)
                 {
                     wrect.top = mrect.top - borderWidth;
                     wrect.bottom = mrect.bottom + borderWidth;
@@ -254,7 +263,6 @@ pair<HMONITOR, Corner> findMainMonitorAndCorner(HWND w, RECT &wrect, const map<H
     return result;
 }
 
-map<HWND, pair<HMONITOR, Corner>> oldWindowMonitor;
 void processAllWindows()
 {
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
@@ -277,12 +285,12 @@ void processAllWindows()
     // int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
     // find main monitor for each window
-    map<HWND, pair<HMONITOR, Corner>> windowMonitor;
+    map<HWND, tuple<HMONITOR, Corner, RECT>> windowMonitor;
     for (auto &[w, r] : windowRects)
     {
         auto mc = findMainMonitorAndCorner(w, r, monitorRects);
         // if(!monitor) monitor = monitorRects.rbegin()->first; // that would steal space for invisible windows, consider filtering them better because some fall into this category incorrectly
-        if(mc.first) windowMonitor[w] = mc;
+        if(mc.first) windowMonitor[w] = {mc.first, mc.second, r};
         // else
         //     cout << "No monitor for window " << w << endl;
     }
@@ -290,7 +298,7 @@ void processAllWindows()
     bool changed = false;
     for(auto&[w,r]: oldWindowMonitor)
     {
-        if(!windowMonitor.count(w) || windowMonitor.at(w).first != r.first)
+        if(!windowMonitor.count(w) || get<0>(windowMonitor.at(w)) != get<0>(r))
         {
             changed = true;
             break;
@@ -298,20 +306,32 @@ void processAllWindows()
     }
     for(auto&[w,r]: windowMonitor)
     {
-        if(!oldWindowMonitor.count(w) || oldWindowMonitor.at(w).first != r.first)
+        if(!oldWindowMonitor.count(w) || get<0>(oldWindowMonitor.at(w)) != get<0>(r))
         {
             changed = true;
             break;
         }
     }
 
-    oldWindowMonitor = windowMonitor;
-
     if(!changed) return;
+
+    // preserve maximum sizes of windows
+    map<HWND, RECT> oldWindowRects;
+    for(auto &[w, t]: oldWindowMonitor)
+        oldWindowRects[w] = get<2>(t);
+    oldWindowMonitor = windowMonitor;
+    for(auto &[w, t]: oldWindowMonitor)
+        if(oldWindowRects.count(w))
+        {
+            const RECT& oldR = oldWindowRects[w];
+            RECT& newR = get<2>(oldWindowMonitor[w]);
+            if(oldR.right - oldR.left >= newR.right - newR.left && oldR.bottom - oldR.top >= newR.bottom - newR.top)
+                newR = oldR;
+        }
 
     // sort windows according to size and distribute them in corners
     map<HMONITOR, multimap<size_t, pair<HWND, Corner>>> windowsOnMonitor;
-    for(auto &[w, mc]: windowMonitor) windowsOnMonitor[mc.first].insert({calculateRectArea(windowRects[w]), {w, mc.second}});
+    for(auto &[w, mc]: windowMonitor) windowsOnMonitor[get<0>(mc)].insert({calculateRectArea(windowRects[w]), {w, get<1>(mc)}});
     map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> windowsOrderInCorners;
     for(auto &[m, mwc]: windowsOnMonitor)
     {
