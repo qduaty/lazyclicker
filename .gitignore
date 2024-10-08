@@ -75,3 +75,4 @@ build/
 *.log
 *.tlog
 *.pch
+/bare-win32/lazyclicker/.vs/

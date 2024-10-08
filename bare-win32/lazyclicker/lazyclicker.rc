@@ -36,10 +36,6 @@ IDI_LAZYCLICKER         ICON                    "..\\..\\mainicon2.ico"
 // Bitmap
 //
 
-IDB_CHECKED             BITMAP                  "..\\..\\bitmap1.bmp"
-
-IDB_UNCHECKED           BITMAP                  "..\\..\\bmp00001.bmp"
-
 #endif    // Polski (Polska) resources
 /////////////////////////////////////////////////////////////////////////////
 
