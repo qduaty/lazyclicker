@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 
+extern int allowIncreaseByUnits;
 BOOL IsAltTabWindow(HWND hwnd);
 BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam);
 BOOL CALLBACK enumMonitorsProc(HMONITOR monitor, HDC dc, LPRECT pRect, LPARAM lParam);
