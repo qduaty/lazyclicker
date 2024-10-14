@@ -31,7 +31,6 @@ ui_*.h
 qrc_*.cpp
 Thumbs.db
 *.res
-*.rc
 /.qmake.cache
 /.qmake.stash
 
@@ -50,14 +49,12 @@ CMakeLists.txt.user*
 *.idb
 *.ilk
 *.pdb
-*.sln
 *.suo
 *.vcproj
 *vcproj.*.*.user
 *.ncb
 *.sdf
 *.opensdf
-*.vcxproj
 *vcxproj.*
 
 # MinGW generated files
@@ -74,3 +71,8 @@ CMakeLists.txt.user*
 
 query
 build/
+/bare-win32/.vs/
+*.log
+*.tlog
+*.pch
+/bare-win32/lazyclicker/.vs/
