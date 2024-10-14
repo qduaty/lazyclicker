@@ -8,7 +8,7 @@
 
 using namespace std;
 
-constexpr int allowIncreaseByUnits = 2;
+int allowIncreaseByUnits = 2;
 map<HMONITOR, string> monitorNames;
 map<HWND, tuple<HMONITOR, Corner, RECT>> oldWindowMonitor;
 
