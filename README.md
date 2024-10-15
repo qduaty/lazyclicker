@@ -12,7 +12,7 @@ will be enlarged.
 ## Current status
 The app installs itself for startup and provides a menu option for 
 uninstall. Single click on the tray icon triggers windows 
-rearrangement. Alternatively, a configuration option allows to 
+rearrangement. Alternatively, a menu option allows to 
 schedule windows auto-arrangement every second.
 ## Prerequisities
 - Windows 11 (may work on 10 but was not tested)
@@ -21,3 +21,4 @@ schedule windows auto-arrangement every second.
 - perhaps add an option to skip the topright corner, so that 
 windows can be raised with clicking
 - test on a big screen and perhaps implement conditional middle-side placement of smallest windows
+- finish implementing corner preservation so that windows do not make meaningless moves
