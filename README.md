@@ -16,7 +16,7 @@ rearrangement. Alternatively, a menu option allows to
 schedule windows auto-arrangement every second.
 ## Prerequisities
 - Windows 11 (may work on 10 but was not tested)
-- optional Qt6 (has a WTL version too)
+- QtCreator for Qt6 or Visual Studio (2022) for WTL implementation
 ## TODO
 - perhaps add an option to skip the topright corner, so that 
 windows can be raised with clicking
