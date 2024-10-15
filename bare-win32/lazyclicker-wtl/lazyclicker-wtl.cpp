@@ -119,6 +119,9 @@ private:
     void quitAndUnregister() 
     {
         deleteRegistryValue(startupKey, L"lazyclicker");
+        deleteRegistrySubkey(L"Software\\qduaty\\lazyclicker", L"Preferences");
+        deleteRegistrySubkey(L"Software\\qduaty", L"lazyclicker");
+        deleteRegistrySubkey(L"Software", L"qduaty");
         DestroyWindow();
     }
 

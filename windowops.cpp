@@ -115,7 +115,7 @@ int windowDistanceFromCorner(RECT wrect, RECT mrect, flags<Corner, int> c)
     wcorner.y = isBottom ? wrect.bottom : wrect.top;
     int distX = wcorner.x - mcorner.x;
     int distY = wcorner.y - mcorner.y;
-    return sqrt(distX * distX + distY * distY);
+    return int(sqrt(distX * distX + distY * distY));
 }
 
 void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> &windowsOrderInCorners,
@@ -380,6 +380,30 @@ bool deleteRegistryValue(const std::basic_string<TCHAR>& key, const std::basic_s
         std::cerr << "Failed to open key" << std::endl;
     }
 
+    return result;
+}
+
+bool deleteRegistrySubkey(const std::basic_string<TCHAR>& key, const std::basic_string<TCHAR>& name)
+{
+    HKEY hKey;
+    bool result = false;
+    if (RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_WRITE, &hKey) == ERROR_SUCCESS)
+    {
+        if (RegDeleteKey(hKey, name.data()) == ERROR_SUCCESS)
+        {
+            std::wcout << L"Registry key deleted successfully" << std::endl;
+            result = true;
+        }
+        else
+        {
+            std::cerr << "Failed to delete registry key" << std::endl;
+        }
+        RegCloseKey(hKey);
+    }
+    else
+    {
+        std::cerr << "Failed to open key" << std::endl;
+    }
     return result;
 }
 
