@@ -21,7 +21,7 @@ string GetProcessNameFromHWND(HWND hwnd)
     if (hProcess)
     {
         char processName[MAX_PATH] = "<unknown>";
-        if (GetModuleBaseNameA(hProcess, NULL, processName, sizeof(processName)))
+        if (GetModuleBaseNameA(hProcess, nullptr, processName, sizeof(processName)))
             return processName;
 
         CloseHandle(hProcess);

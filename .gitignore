@@ -76,3 +76,6 @@ build/
 *.tlog
 *.pch
 /bare-win32/lazyclicker/.vs/
+/bare-win32/packages/wtl.*
+*.recipe
+*.aps
