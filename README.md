@@ -13,12 +13,16 @@ will be enlarged.
 The app installs itself for startup and provides a menu option for 
 uninstall. Single click on the tray icon triggers windows 
 rearrangement. Alternatively, a menu option allows to 
-schedule windows auto-arrangement every second.
+schedule windows auto-arrangement every second. Double click 
+displays a configuration window with one setting: how much windows 
+can be increased.
 ## Prerequisities
 - Windows 11 (may work on 10 but was not tested)
 - QtCreator for Qt6 or Visual Studio (2022) for WTL implementation
 ## TODO
 - perhaps add an option to skip the topright corner, so that 
 windows can be raised with clicking
-- test on a big screen and perhaps implement conditional middle-side placement of smallest windows
-- finish implementing corner preservation so that windows do not make meaningless moves
+- test on a big screen and perhaps implement conditional
+middle-side placement of smallest windows
+- finish implementing corner preservation so that windows do not
+make meaningless moves
