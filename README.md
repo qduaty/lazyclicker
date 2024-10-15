@@ -15,8 +15,9 @@ uninstall. Single click on the tray icon triggers windows
 rearrangement. Alternatively, a configuration option allows to 
 schedule windows auto-arrangement every second.
 ## Prerequisities
-- Qt6
+- Windows 11 (may work on 10 but was not tested)
+- optional Qt6 (has a WTL version too)
 ## TODO
-- convert to MFC
 - perhaps add an option to skip the topright corner, so that 
 windows can be raised with clicking
+- test on a big screen and perhaps implement conditional middle-side placement of smallest windows
