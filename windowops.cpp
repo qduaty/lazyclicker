@@ -8,7 +8,7 @@
 
 using namespace std;
 
-int allowIncreaseByUnits = 2;
+int windowops_maxIncrease = 0;
 map<HMONITOR, string> monitorNames;
 map<HWND, tuple<HMONITOR, Corner, RECT>> oldWindowMonitor;
 
@@ -172,7 +172,7 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 // 3°
                 otherCorner = corner ^ int(Corner::bottomright);
                 long dx = max(dx0, long(mcvw.at(otherCorner).size() * unitSize) - dy);
-                long maxIncreaseX = allowIncreaseByUnits * unitSize;
+                long maxIncreaseX = windowops_maxIncrease;
                 long maxIncreaseY = maxIncreaseX;
                 if(oldWindowMonitor.count(windows[i])) 
                 {

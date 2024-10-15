@@ -8,7 +8,7 @@
 #include <optional>
 #include <iostream>
 
-extern int allowIncreaseByUnits;
+extern int windowops_maxIncrease;
 BOOL IsAltTabWindow(HWND hwnd);
 BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam);
 BOOL CALLBACK enumMonitorsProc(HMONITOR monitor, HDC dc, LPRECT pRect, LPARAM lParam);

@@ -36,9 +36,9 @@ void MainWindow::on_actionAuto_arrange_windows_toggled(bool value)
     else timer.stop();
 }
 
-void MainWindow::on_allowIncreaseUnits_changed(int v)
+void MainWindow::on_maxIncrease_valueChanged(int v)
 {
-    allowIncreaseByUnits = v;
+    windowops_maxIncrease = v;
 }
 
 void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)

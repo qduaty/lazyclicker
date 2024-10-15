@@ -22,7 +22,7 @@ public:
 
 private slots:
     void on_actionAuto_arrange_windows_toggled(bool);
-    void on_allowIncreaseUnits_changed(int);
+    void on_maxIncrease_valueChanged(int);
 private:
     void iconActivated(QSystemTrayIcon::ActivationReason reason);
 
