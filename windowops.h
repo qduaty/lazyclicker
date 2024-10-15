@@ -61,27 +61,6 @@ readRegistryValue(const std::basic_string_view<TCHAR> key, const std::basic_stri
     return result;
 }
 
-template<> inline std::optional<std::wstring>
-readRegistryValue<std::wstring, REG_SZ>(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name)
-{
-    HKEY hKey;
-    std::optional<std::wstring> result;
-    if (RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_READ, &hKey) == ERROR_SUCCESS)
-    {
-        DWORD dataType;
-        DWORD dataSize;
-        if (RegQueryValueEx(hKey, name.data(), NULL, &dataType, NULL, &dataSize) == ERROR_SUCCESS && dataType == REG_SZ)
-        {
-            BYTE* data = new BYTE[dataSize];
-            if (RegQueryValueEx(hKey, name.data(), NULL, &dataType, data, &dataSize) == ERROR_SUCCESS)
-                result = reinterpret_cast<wchar_t*>(data);
-            delete[] data;
-        }
-        RegCloseKey(hKey);
-    }
-    return result;
-}
-
 template<typename T, int RegType>inline bool
 writeRegistryValue(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name, const T& v)
 {
@@ -107,29 +86,9 @@ writeRegistryValue(const std::basic_string_view<TCHAR> key, const std::basic_str
     return result;
 }
 
-template<>inline bool
-writeRegistryValue<std::wstring, REG_SZ>(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name, const std::wstring& v)
-{
-    HKEY hKey;
-    bool result = false;
-    if (RegCreateKeyEx(HKEY_CURRENT_USER, key.data(), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS)
-    {
-        if (RegSetValueEx(hKey, name.data(), 0, REG_SZ, (const BYTE*)v.data(), sizeof(wchar_t) * v.size()) == ERROR_SUCCESS)
-        {
-            result = true;
-        }
-        else
-        {
-            std::cerr << "Failed to set value" << std::endl;
-        }
-        RegCloseKey(hKey);
-    }
-    else
-    {
-        std::cerr << "Failed to create/open key" << std::endl;
-    }
-
-    return result;
-}
-
+template<> std::optional<std::wstring>
+readRegistryValue<std::wstring, REG_SZ>(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name);
+template<>bool
+writeRegistryValue<std::wstring, REG_SZ>(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name, const std::wstring& v);
+bool deleteRegistryValue(const std::basic_string<TCHAR>& key, const std::basic_string<TCHAR>& name);
 #endif // WINDOWOPS_H

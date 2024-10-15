@@ -9,6 +9,7 @@
 
 CAppModule _Module;
 constexpr TCHAR settingsKey[] = _T("Software\\qduaty\\lazyclicker\\Preferences");
+constexpr TCHAR startupKey[] = _T("Software\\Microsoft\\Windows\\CurrentVersion\\Run");
 
 class CMainWnd : public CWindowImpl<CMainWnd>
 {
@@ -40,13 +41,18 @@ public:
         nid.uID = IDI_LAZYCLICKER;
         nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
         nid.uCallbackMessage = WM_TRAYICON;
-        nid.hIcon = LoadIcon(HINSTANCE(GetWindowLongPtr(GWLP_HINSTANCE)), MAKEINTRESOURCE(IDI_LAZYCLICKER));
+        auto hInstance = HINSTANCE(GetWindowLongPtr(GWLP_HINSTANCE));
+        nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_LAZYCLICKER));
         //        LoadString(hInstance, IDS_APPTOOLTIP, nidApp.szTip, MAX_LOADSTRING);
         lstrcpy(nid.szTip, _T("Click to arrange windows"));
         Shell_NotifyIcon(NIM_ADD, &nid);
         SetTimer(1, 1000);
 
         m_bAutoArrange = readRegistryValue<std::wstring, REG_SZ>(settingsKey, L"actionAuto_arrange_windows") == L"true";
+        TCHAR processName[MAX_PATH] = { 0 };
+
+        if (GetModuleFileName(hInstance, processName, MAX_PATH))
+            writeRegistryValue<std::wstring, REG_SZ>(startupKey, L"lazyclicker", processName);
 
         return 0;
     }
@@ -112,6 +118,7 @@ public:
 private:
     void quitAndUnregister() 
     {
+        deleteRegistryValue(startupKey, L"lazyclicker");
         DestroyWindow();
     }
 
