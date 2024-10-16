@@ -10,21 +10,20 @@ be slightly reduced, windows that spanned multiple screens will be
 reduced to a single screen, and those that are almost full screen
 will be enlarged.
 ## Current status
-The app installs itself for startup and provides a menu option for 
-uninstall. Single click on the tray icon triggers windows 
-rearrangement. Alternatively, a menu option allows to 
-schedule windows auto-arrangement every second. Double click 
-displays a configuration window with one setting: how much windows 
-can be increased.
+- Installs itself for startup and provides a menu option for 
+uninstall
+- Single click on the tray icon triggers windows rearrangement and
+there is a menu option for bulk minimization
+- Alternatively, a menu option enables windows auto-arrangement
+and single click toggles bulk minimization
+- Double click displays a settings window
 ## Prerequisities
 - Windows 11 (may work on 10 but was not tested)
 - QtCreator for Qt6 or Visual Studio (2022) for WTL implementation
 ## TODO
-- perhaps add an option to skip the topright corner, so that 
+- maybe add an option to skip the topright corner, so that 
 windows can be raised with clicking
-- test on a big screen and perhaps implement conditional
-middle-side placement of smallest windows
+- test on a big screen and maybe implement conditional middle-side
+placement of smallest windows
 - finish implementing corner preservation so that windows do not
 make meaningless moves
-- implement smart size management so windows that were manually
-reduced by the user are not increased
