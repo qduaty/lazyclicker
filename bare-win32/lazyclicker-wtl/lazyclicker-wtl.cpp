@@ -115,7 +115,7 @@ public:
         {
         case WM_LBUTTONDOWN:
             if (m_bAutoArrange)
-                toggleBulkMinimizeWindows();
+                toggleMinimizeAllWindows();
             else
                 processAllWindows();
             break;

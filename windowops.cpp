@@ -1,17 +1,59 @@
 #include "windowops.h"
-#include <iostream>
+#include <map>
+#include <vector>
+#include <set>
 #include <memory>
 #include <psapi.h>
 #include <uxtheme.h>
-#include <string>
 #include <shellscalingapi.h>
 
 using namespace std;
 
 int windowops_maxIncrease = 0;
+
+template<typename E, typename I>struct flags {
+    I v;
+    flags() = default;
+    flags(E x) : v(I(x)) {}
+    auto operator=(E x) { v = I(x); return *this; }
+    auto operator=(I x) { v = x; return *this; }
+    operator I() const { return v; }
+    I operator&(E x) const { return v & I(x); }
+    bool operator==(E x) const { return v == I(x); }
+};
+
+enum class Corner : int { top = 0, left = 0, topleft = top | left, right = 1, topright = top | right, bottom = 2, bottomleft = bottom | left, bottomright = bottom | right };
+
 map<HMONITOR, string> monitorNames;
 map<HWND, tuple<HMONITOR, Corner, RECT>> oldWindowMonitor;
 vector<HWND> bulkMinimizedWindows;
+set<HWND> windowsWithSizeChanged;
+
+// RECT FUNCTIONS
+
+size_t rectArea(RECT rect)
+{
+    return (rect.bottom - rect.top) * (rect.right - rect.left);
+}
+
+size_t diameter(const RECT& rect)
+{
+    auto width = rect.right - rect.left;
+    auto height = rect.bottom - rect.top;
+    return sqrt(width * width + height * height);
+}
+
+bool isDifferentRectSize(const RECT& r1, const RECT& r2)
+{
+    auto w1 = r1.right - r1.left;
+    auto w2 = r2.right - r2.left;
+    auto h1 = r1.bottom - r1.top;
+    auto h2 = r2.bottom - r2.top;
+    bool result = (w1 != w2) || (h1 != h2);
+    return result;
+}
+
+// WINDOWS UTILITY FUNCTIONS
 
 string GetProcessNameFromHWND(HWND hwnd)
 {
@@ -34,6 +76,7 @@ string GetProcessNameFromHWND(HWND hwnd)
 // https://stackoverflow.com/questions/7277366/why-does-enumwindows-return-more-windows-than-i-expected
 BOOL IsAltTabWindow(HWND hwnd)
 {
+    if (!hwnd) return FALSE;
     TITLEBARINFO ti {sizeof(TITLEBARINFO)};
     HWND hwndTry, hwndWalk = nullptr;
 
@@ -58,6 +101,8 @@ BOOL IsAltTabWindow(HWND hwnd)
 
     return TRUE;
 }
+
+// VISITOR PROCEDURES AND OTHER PROGRAM LOGIC
 
 BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
 {
@@ -87,11 +132,6 @@ BOOL CALLBACK enumMonitorsProc(HMONITOR monitor, HDC dc, LPRECT pRect, LPARAM lP
     auto &monitorRects = *reinterpret_cast<map<HMONITOR, RECT>*>(lParam);
     monitorRects[monitor] = *pRect;
     return TRUE;
-}
-
-size_t calculateRectArea(RECT rect)
-{
-    return (rect.bottom - rect.top) * (rect.right - rect.left);
 }
 
 RECT trimAndMoveToMonitor(RECT windowRect, RECT monRect)
@@ -128,13 +168,11 @@ void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner, int>, vector<
     {
         auto mrect = monitorRects.at(mon);
         for(auto &[corner, windows]: mcvw)
-        {
             for(int i = 0; i < windows.size(); i++)
             {
                 auto &wrect = windowRects.at(windows[i]);
                 MoveWindow(windows[i], mrect.left, mrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
             }
-        }
     }
 }
 
@@ -173,7 +211,7 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 // 3°
                 otherCorner = corner ^ int(Corner::bottomright);
                 long dx = max(dx0, long(mcvw.at(otherCorner).size() * unitSize) - dy);
-                long maxIncreaseX = windowops_maxIncrease;
+                long maxIncreaseX = windowsWithSizeChanged.count(windows[i]) ? 0 : windowops_maxIncrease;
                 long maxIncreaseY = maxIncreaseX;
                 if(oldWindowMonitor.count(windows[i])) 
                 {
@@ -224,13 +262,6 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
     }
 }
 
-int diameter(const RECT& rect)
-{
-    int width = rect.right - rect.left;
-    int height = rect.bottom - rect.top;
-    return sqrt(width * width + height * height);
-}
-
 pair<HMONITOR, Corner> findMainMonitorAndCorner(HWND w, RECT &wrect, const map<HMONITOR, RECT> &monitorRects)
 {
     size_t maxArea = 0;
@@ -239,7 +270,7 @@ pair<HMONITOR, Corner> findMainMonitorAndCorner(HWND w, RECT &wrect, const map<H
     {
         RECT rect;
         IntersectRect(&rect, &r, &wrect);
-        size_t area = calculateRectArea(rect);
+        size_t area = rectArea(rect);
         if (area > maxArea)
         {
             result.first = m;
@@ -263,6 +294,8 @@ pair<HMONITOR, Corner> findMainMonitorAndCorner(HWND w, RECT &wrect, const map<H
     }
     return result;
 }
+
+// API FUNCTIONS
 
 void processAllWindows()
 {
@@ -306,20 +339,29 @@ void processAllWindows()
             break;
         }
     }
-    for(auto&[w,r]: windowMonitor)
-    {
-        if(!oldWindowMonitor.count(w) || get<0>(oldWindowMonitor.at(w)) != get<0>(r))
-        {
-            changed = true;
-            break;
-        }
-    }
 
-    // TODO also implement sizeChanged (a new map). If a window size is different from how it was resized by the algorithm, but stays on the same 
-    // monitor, it indicates user initiated resize. Such a window should be decreased if necessary but not increased, and the original size should be
-    // updated because it no longer reflects user's intent.
+    windowsWithSizeChanged.clear();
+    if(!changed)
+        for(auto&[w,r]: windowMonitor)
+        {
+            bool existed = oldWindowMonitor.count(w);
+            bool sameMonitor = existed && get<0>(oldWindowMonitor.at(w)) == get<0>(r);
+            if(!existed || !sameMonitor)
+            {
+                changed = true;
+                windowsWithSizeChanged.clear();
+                break;
+            }
+            else if (existed && sameMonitor && isDifferentRectSize(get<2>(oldWindowMonitor[w]), get<2>(windowMonitor[w])))
+            {
+                changed = true;
+                windowsWithSizeChanged.insert(w);
+            }
+        }
 
     if(!changed) return;
+    for (auto& w : windowsWithSizeChanged)
+        get<2>(oldWindowMonitor[w]) = get<2>(windowMonitor[w]);
 
     // preserve maximum sizes of windows
     map<HWND, RECT> oldWindowRects;
@@ -337,13 +379,13 @@ void processAllWindows()
 
     // sort windows according to size and distribute them in corners
     map<HMONITOR, multimap<size_t, pair<HWND, Corner>>> windowsOnMonitor;
-    for(auto &[w, mc]: windowMonitor) windowsOnMonitor[get<0>(mc)].insert({calculateRectArea(windowRects[w]), {w, get<1>(mc)}});
+    for(auto &[w, mc]: windowMonitor) windowsOnMonitor[get<0>(mc)].insert({rectArea(windowRects[w]), {w, get<1>(mc)}});
     map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> windowsOrderInCorners;
     for(auto &[m, mwc]: windowsOnMonitor)
     {
         int numSmallWindows = 0;
         int numBigWindows = 0;
-        auto monArea = calculateRectArea(monitorRects[m]);
+        auto monArea = rectArea(monitorRects[m]);
         for(auto&[s, wc]: mwc)
             if(s < 0.9 * monArea) numSmallWindows++;
             else numBigWindows++;
@@ -364,7 +406,7 @@ void processAllWindows()
     arrangeWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
 }
 
-void toggleBulkMinimizeWindows()
+void toggleMinimizeAllWindows()
 {
     if (bulkMinimizedWindows.size())
     {
@@ -382,6 +424,8 @@ void toggleBulkMinimizeWindows()
             }
     }
 }
+
+// REGISTRY FUNCTIONS
 
 bool deleteRegistryValue(const std::basic_string<TCHAR>& key, const std::basic_string<TCHAR>& name)
 {
