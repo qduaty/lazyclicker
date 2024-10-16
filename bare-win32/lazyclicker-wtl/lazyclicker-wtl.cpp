@@ -85,21 +85,11 @@ public:
 
     LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
     {
-        //auto hMainIcon = LoadIcon(nullptr, (LPCTSTR)MAKEINTRESOURCE(IDI_LAZYCLICKER));
-
-        NOTIFYICONDATA nid = { 0 };
-        nid.cbSize = sizeof(NOTIFYICONDATA);
-        nid.hWnd = m_hWnd;
-        nid.uID = IDI_LAZYCLICKER;
-        nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-        nid.uCallbackMessage = WM_TRAYICON;
-        auto hInstance = HINSTANCE(GetWindowLongPtr(GWLP_HINSTANCE));
-        nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_LAZYCLICKER));
-        LoadString(hInstance, IDS_APPTOOLTIP, nid.szTip, std::size(nid.szTip));
-        Shell_NotifyIcon(NIM_ADD, &nid);
         SetTimer(1, 1000);
 
+        auto hInstance = HINSTANCE(GetWindowLongPtr(GWLP_HINSTANCE));
         m_bAutoArrange = readRegistryValue<std::wstring, REG_SZ>(settingsKey, L"actionAuto_arrange_windows") == L"true";
+        updateTrayIcon(true);
         windowops_maxIncrease = readRegistryValue<DWORD, REG_DWORD>(settingsKey, L"allowedIncrease").value_or(0);
         settingsDlg.allowedIncrease = windowops_maxIncrease;
         TCHAR processName[MAX_PATH] = { 0 };
@@ -124,8 +114,9 @@ public:
                 CMenu menu;
                 menu.CreatePopupMenu();
                 menu.AppendMenu(MF_STRING | (m_bAutoArrange ? MF_CHECKED : 0), ID_TRAYMENU_OPTION_AUTO_ARRANGE, _T("Auto arrange windows"));
+                if(!m_bAutoArrange) menu.AppendMenu(MF_STRING, ID_TRAYMENU_TOGGLE_MINIMIZE_ALL, _T("Toggle minimize all windows"));
                 menu.AppendMenu(MF_STRING, ID_TRAYMENU_OPTION_QUIT, _T("Quit"));
-                menu.AppendMenu(MF_STRING, ID_TRAYMENU_OPTION_QUIT_AND_UNREGISTER, _T("Quit and unregister"));
+                menu.AppendMenu(MF_STRING, ID_TRAYMENU_OPTION_QUIT_AND_UNREGISTER, _T("Uninstall"));
 
                 POINT pt;
                 GetCursorPos(&pt);
@@ -149,12 +140,16 @@ public:
         case ID_TRAYMENU_OPTION_AUTO_ARRANGE:
             m_bAutoArrange = !m_bAutoArrange;
             writeRegistryValue<std::wstring, REG_SZ>(settingsKey, L"actionAuto_arrange_windows", m_bAutoArrange ? L"true" : L"false");
+            updateTrayIcon(false);
             break;
         case ID_TRAYMENU_OPTION_QUIT:
             DestroyWindow();
             break;
         case ID_TRAYMENU_OPTION_QUIT_AND_UNREGISTER:
             quitAndUnregister();
+            break;
+        case ID_TRAYMENU_TOGGLE_MINIMIZE_ALL:
+            if(!toggleMinimizeAllWindows()) processAllWindows(true); 
             break;
         default:
             break;
@@ -176,7 +171,23 @@ public:
     }
 
 private:
-    void quitAndUnregister() 
+    void updateTrayIcon(bool create)
+    {
+        //auto hMainIcon = LoadIcon(nullptr, (LPCTSTR)MAKEINTRESOURCE(IDI_LAZYCLICKER));
+
+        NOTIFYICONDATA nid = { 0 };
+        nid.cbSize = sizeof(NOTIFYICONDATA);
+        nid.hWnd = m_hWnd;
+        nid.uID = IDI_LAZYCLICKER;
+        nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+        nid.uCallbackMessage = WM_TRAYICON;
+        auto hInstance = HINSTANCE(GetWindowLongPtr(GWLP_HINSTANCE));
+        nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_LAZYCLICKER));
+        LoadString(hInstance, (m_bAutoArrange ? IDS_APPTOOLTIP2 : IDS_APPTOOLTIP1), nid.szTip, std::size(nid.szTip));
+        Shell_NotifyIcon(create ? NIM_ADD : NIM_MODIFY, &nid);
+    }
+
+    void quitAndUnregister()
     {
         deleteRegistryValue(startupKey, L"lazyclicker");
         deleteRegistrySubkey(L"Software\\qduaty\\lazyclicker", L"Preferences");
@@ -191,7 +202,8 @@ private:
     enum { 
         ID_TRAYMENU_OPTION_AUTO_ARRANGE = 1001, 
         ID_TRAYMENU_OPTION_QUIT = 1002, 
-        ID_TRAYMENU_OPTION_QUIT_AND_UNREGISTER = 1003
+        ID_TRAYMENU_OPTION_QUIT_AND_UNREGISTER = 1003,
+        ID_TRAYMENU_TOGGLE_MINIMIZE_ALL = 1004
     };
 };
 

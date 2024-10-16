@@ -7,8 +7,11 @@
 
 extern int windowops_maxIncrease;
 
-void processAllWindows();
-void toggleMinimizeAllWindows();
+void processAllWindows(bool force = false);
+/// <summary>
+/// </summary>
+/// <returns>windows were minimized</returns>
+bool toggleMinimizeAllWindows();
 
 template<typename T, int RegType> inline std::optional<T> 
 readRegistryValue(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name)

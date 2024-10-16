@@ -297,7 +297,7 @@ pair<HMONITOR, Corner> findMainMonitorAndCorner(HWND w, RECT &wrect, const map<H
 
 // API FUNCTIONS
 
-void processAllWindows()
+void processAllWindows(bool force)
 {
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
     cout << "Enumerating Monitors...\n";
@@ -359,7 +359,7 @@ void processAllWindows()
             }
         }
 
-    if(!changed) return;
+    if(!force && !changed) return;
     for (auto& w : windowsWithSizeChanged)
         get<2>(oldWindowMonitor[w]) = get<2>(windowMonitor[w]);
 
@@ -406,13 +406,14 @@ void processAllWindows()
     arrangeWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
 }
 
-void toggleMinimizeAllWindows()
+bool toggleMinimizeAllWindows()
 {
     if (bulkMinimizedWindows.size())
     {
         for (auto& w : bulkMinimizedWindows)
             ShowWindow(w, SW_RESTORE);
         bulkMinimizedWindows.clear();
+        return false;
     }
     else
     {
@@ -422,6 +423,7 @@ void toggleMinimizeAllWindows()
                 ShowWindow(w, SW_MINIMIZE);
                 bulkMinimizedWindows.push_back(w);
             }
+        return true;
     }
 }
 
