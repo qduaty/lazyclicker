@@ -26,3 +26,5 @@ windows can be raised with clicking
 middle-side placement of smallest windows
 - finish implementing corner preservation so that windows do not
 make meaningless moves
+- implement smart size management so windows that were manually
+reduced by the user are not increased
