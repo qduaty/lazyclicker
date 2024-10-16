@@ -114,7 +114,10 @@ public:
         switch (LOWORD(lParam))
         {
         case WM_LBUTTONDOWN:
-            processAllWindows();
+            if (m_bAutoArrange)
+                toggleBulkMinimizeWindows();
+            else
+                processAllWindows();
             break;
         case WM_RBUTTONUP:
             {

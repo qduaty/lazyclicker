@@ -11,6 +11,7 @@ using namespace std;
 int windowops_maxIncrease = 0;
 map<HMONITOR, string> monitorNames;
 map<HWND, tuple<HMONITOR, Corner, RECT>> oldWindowMonitor;
+vector<HWND> bulkMinimizedWindows;
 
 string GetProcessNameFromHWND(HWND hwnd)
 {
@@ -296,6 +297,7 @@ void processAllWindows()
     }
 
     bool changed = false;
+
     for(auto&[w,r]: oldWindowMonitor)
     {
         if(!windowMonitor.count(w) || get<0>(windowMonitor.at(w)) != get<0>(r))
@@ -312,6 +314,10 @@ void processAllWindows()
             break;
         }
     }
+
+    // TODO also implement sizeChanged (a new map). If a window size is different from how it was resized by the algorithm, but stays on the same 
+    // monitor, it indicates user initiated resize. Such a window should be decreased if necessary but not increased, and the original size should be
+    // updated because it no longer reflects user's intent.
 
     if(!changed) return;
 
@@ -356,6 +362,25 @@ void processAllWindows()
     }
 
     arrangeWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
+}
+
+void toggleBulkMinimizeWindows()
+{
+    if (bulkMinimizedWindows.size())
+    {
+        for (auto& w : bulkMinimizedWindows)
+            ShowWindow(w, SW_RESTORE);
+        bulkMinimizedWindows.clear();
+    }
+    else
+    {
+        for (auto& [w, mcr] : oldWindowMonitor)
+            if (!IsIconic(w))
+            {
+                ShowWindow(w, SW_MINIMIZE);
+                bulkMinimizedWindows.push_back(w);
+            }
+    }
 }
 
 bool deleteRegistryValue(const std::basic_string<TCHAR>& key, const std::basic_string<TCHAR>& name)

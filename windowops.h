@@ -38,7 +38,7 @@ std::pair<HMONITOR, Corner> findMainMonitorAndCorner(HWND w, RECT &windowRect, c
 
 void processAllWindows();
 
-
+void toggleBulkMinimizeWindows();
 
 template<typename T, int RegType> inline std::optional<T> 
 readRegistryValue(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name)
