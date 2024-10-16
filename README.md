@@ -27,3 +27,4 @@ windows can be raised with clicking
 placement of smallest windows
 - finish implementing corner preservation so that windows do not
 make meaningless moves
+- support vertical screens (different order of corners)
