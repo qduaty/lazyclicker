@@ -479,6 +479,21 @@ bool deleteRegistrySubkey(const std::basic_string<TCHAR>& key, const std::basic_
     return result;
 }
 
+bool CreateConsole()
+{
+    bool result = AllocConsole();
+    if (result) 
+    {
+        FILE* fp;
+        freopen_s(&fp, "CONOUT$", "w", stdout);
+        freopen_s(&fp, "CONOUT$", "w", stderr);
+        freopen_s(&fp, "CONIN$", "r", stdin);
+
+        std::cout << "Console created successfully." << std::endl;
+    }
+    return result;
+}
+
 template<> std::optional<std::wstring>
 readRegistryValue<std::wstring, REG_SZ>(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name)
 {

@@ -65,4 +65,9 @@ template<>bool
 writeRegistryValue<std::wstring, REG_SZ>(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name, const std::wstring& v);
 bool deleteRegistryValue(const std::basic_string<TCHAR>& key, const std::basic_string<TCHAR>& name);
 bool deleteRegistrySubkey(const std::basic_string<TCHAR>& key, const std::basic_string<TCHAR>& name);
+/// <summary>
+/// Create win32 console in order to access standard pipes
+/// </summary>
+bool CreateConsole();
+
 #endif // WINDOWOPS_H

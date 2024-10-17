@@ -207,8 +207,9 @@ private:
     };
 };
 
-int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR /*lpCmdLine*/, int nCmdShow)
+int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpCmdLine, int nCmdShow)
 {
+    if (lpCmdLine == std::wstring_view(L"--console")) CreateConsole();
     _Module.Init(nullptr, hInstance);
 
     CMainWnd wnd;
