@@ -27,6 +27,7 @@ enum class Corner : int { top = 0, left = 0, topleft = top | left, right = 1, to
 map<HMONITOR, string> monitorNames;
 map<HWND, tuple<HMONITOR, Corner, RECT>> oldWindowMonitor;
 vector<HWND> bulkMinimizedWindows;
+set<HWND> unmovableWindows;
 //set<HWND> windowsWithSizeChanged;
 
 // RECT FUNCTIONS
@@ -258,6 +259,12 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 cout << cornerNames[int(corner)] << ':' << i << ')' <<" to relative: " << wrect.left - mrect.left << ':';
                 cout << wrect.top - mrect.top << ':' << wrect.right - mrect.right << ':' << wrect.bottom - mrect.bottom << '[';
                 auto result = MoveWindow(windows[i], wrect.left, wrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
+                if (!result)
+                {
+                    unmovableWindows.insert(windows[i]);
+                    oldWindowMonitor.erase(windows[i]);
+                }
+
                 cout << result << ']' << endl;
             }
         }
@@ -342,6 +349,11 @@ void processAllWindows(bool force)
         }
     }
 
+    set<HWND>deletedUnmovableWindows;
+    for (auto& w : unmovableWindows) if(!windowMonitor.count(w)) deletedUnmovableWindows.insert(w);
+    for (auto& w : deletedUnmovableWindows) unmovableWindows.erase(w);
+    deletedUnmovableWindows.clear();
+
     //windowsWithSizeChanged.clear();
     if(!changed)
         for(auto&[w,r]: windowMonitor)
@@ -397,11 +409,11 @@ void processAllWindows(bool force)
         constexpr Corner corners[] {Corner::bottomleft, Corner::topleft, Corner::topright, Corner::bottomright};
         int i = (numSmallWindows > 1 && numBigWindows > 0) ? 0 : 1;
         for(auto&[s, wc]: mwc)
-        {
-            // SHOWDEBUG(w);
-            windowsOrderInCorners[m][corners[i%4]].push_back(wc.first);
-            i++;
-        }
+            if (!unmovableWindows.count(wc.first)) 
+            {
+                windowsOrderInCorners[m][corners[i % 4]].push_back(wc.first);
+                i++;
+            }
     }
 
     arrangeWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
