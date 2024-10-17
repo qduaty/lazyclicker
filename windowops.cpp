@@ -27,7 +27,7 @@ enum class Corner : int { top = 0, left = 0, topleft = top | left, right = 1, to
 map<HMONITOR, string> monitorNames;
 map<HWND, tuple<HMONITOR, Corner, RECT>> oldWindowMonitor;
 vector<HWND> bulkMinimizedWindows;
-set<HWND> windowsWithSizeChanged;
+//set<HWND> windowsWithSizeChanged;
 
 // RECT FUNCTIONS
 
@@ -211,7 +211,8 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 // 3°
                 otherCorner = corner ^ int(Corner::bottomright);
                 long dx = max(dx0, long(mcvw.at(otherCorner).size() * unitSize) - dy);
-                long maxIncreaseX = windowsWithSizeChanged.count(windows[i]) ? 0 : windowops_maxIncrease;
+                //long maxIncreaseX = windowsWithSizeChanged.count(windows[i]) ? 0 : windowops_maxIncrease;
+                long maxIncreaseX = windowops_maxIncrease;
                 long maxIncreaseY = maxIncreaseX;
                 if(oldWindowMonitor.count(windows[i])) 
                 {
@@ -254,9 +255,10 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 constexpr const char *cornerNames[] =
                     {"Corner::topleft", "Corner::topright", "Corner::bottomleft", "Corner::bottomright"};
                 cout << "Moving window " << windows[i] << '(' << monitorNames[mon] << '@';
-                cout << cornerNames[int(corner)] << ':' << i << ')' <<" to relative: " << newRect.left - mrect.left << ':';
-                cout << newRect.top - mrect.top << ':' << newRect.right - mrect.right << ':' << newRect.bottom - mrect.bottom << '[';
-                cout << MoveWindow(windows[i], newRect.left, newRect.top, newRect.right - newRect.left, newRect.bottom - newRect.top, TRUE) << ']' << endl;
+                cout << cornerNames[int(corner)] << ':' << i << ')' <<" to relative: " << wrect.left - mrect.left << ':';
+                cout << wrect.top - mrect.top << ':' << wrect.right - mrect.right << ':' << wrect.bottom - mrect.bottom << '[';
+                auto result = MoveWindow(windows[i], wrect.left, wrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
+                cout << result << ']' << endl;
             }
         }
     }
@@ -340,7 +342,7 @@ void processAllWindows(bool force)
         }
     }
 
-    windowsWithSizeChanged.clear();
+    //windowsWithSizeChanged.clear();
     if(!changed)
         for(auto&[w,r]: windowMonitor)
         {
@@ -349,19 +351,18 @@ void processAllWindows(bool force)
             if(!existed || !sameMonitor)
             {
                 changed = true;
-                windowsWithSizeChanged.clear();
+                //windowsWithSizeChanged.clear();
                 break;
             }
             else if (existed && sameMonitor && isDifferentRectSize(get<2>(oldWindowMonitor[w]), get<2>(windowMonitor[w])))
             {
-                changed = true;
-                windowsWithSizeChanged.insert(w);
+                //changed = true;
+                //windowsWithSizeChanged.insert(w);
             }
         }
 
     if(!force && !changed) return;
-    for (auto& w : windowsWithSizeChanged)
-        get<2>(oldWindowMonitor[w]) = get<2>(windowMonitor[w]);
+    //for (auto& w : windowsWithSizeChanged) get<2>(oldWindowMonitor[w]) = get<2>(windowMonitor[w]);
 
     // preserve maximum sizes of windows
     map<HWND, RECT> oldWindowRects;
