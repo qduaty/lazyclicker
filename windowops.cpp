@@ -11,6 +11,11 @@ using namespace std;
 
 int windowops_maxIncrease = 0;
 
+/// <summary>
+/// enum class wrapper
+/// </summary>
+/// <typeparam name="E">enum class</typeparam>
+/// <typeparam name="I">underlying int</typeparam>
 template<typename E, typename I>struct flags {
     I v;
     flags() = default;
@@ -25,10 +30,9 @@ template<typename E, typename I>struct flags {
 enum class Corner : int { top = 0, left = 0, topleft = top | left, right = 1, topright = top | right, bottom = 2, bottomleft = bottom | left, bottomright = bottom | right };
 
 map<HMONITOR, string> monitorNames;
-map<HWND, tuple<HMONITOR, Corner, RECT>> oldWindowMonitor;
+map<HWND, tuple<HMONITOR, Corner, RECT>> oldWindowMonitor; /// previous windows placement for tracking changes
 vector<HWND> bulkMinimizedWindows;
 set<HWND> unmovableWindows;
-//set<HWND> windowsWithSizeChanged;
 
 // RECT FUNCTIONS
 
@@ -182,10 +186,10 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                     map<HWND, RECT> &windowRects)
 
 {
-    int borderWidth = 0;
-    int unitSize = 16;
     for(auto &[mon, mcvw]: windowsOrderInCorners)
     {
+        int borderWidth = 0;
+        int unitSize = 16;
         HTHEME theme = nullptr;
         auto mrect = monitorRects.at(mon);
         // 1° distribute windows in corners
@@ -354,7 +358,7 @@ void processAllWindows(bool force)
     for (auto& w : deletedUnmovableWindows) unmovableWindows.erase(w);
     deletedUnmovableWindows.clear();
 
-    //windowsWithSizeChanged.clear();
+    set<HWND> windowsWithSizeChanged;
     if(!changed)
         for(auto&[w,r]: windowMonitor)
         {
@@ -363,32 +367,32 @@ void processAllWindows(bool force)
             if(!existed || !sameMonitor)
             {
                 changed = true;
-                //windowsWithSizeChanged.clear();
+                windowsWithSizeChanged.clear();
                 break;
             }
             else if (existed && sameMonitor && isDifferentRectSize(get<2>(oldWindowMonitor[w]), get<2>(windowMonitor[w])))
             {
-                //changed = true;
-                //windowsWithSizeChanged.insert(w);
+                changed = true;
+                windowsWithSizeChanged.insert(w);
             }
         }
 
     if(!force && !changed) return;
-    //for (auto& w : windowsWithSizeChanged) get<2>(oldWindowMonitor[w]) = get<2>(windowMonitor[w]);
 
     // preserve maximum sizes of windows
-    map<HWND, RECT> oldWindowRects;
-    for(auto &[w, t]: oldWindowMonitor)
-        oldWindowRects[w] = get<2>(t);
+    // // TODO reimplement as maximumWindowSizes
+    //map<HWND, RECT> oldWindowRects;
+    //for(auto &[w, t]: oldWindowMonitor) oldWindowRects[w] = get<2>(t);
+
     oldWindowMonitor = windowMonitor;
-    for(auto &[w, t]: oldWindowMonitor)
-        if(oldWindowRects.count(w))
-        {
-            const RECT& oldR = oldWindowRects[w];
-            RECT& newR = get<2>(oldWindowMonitor[w]);
-            if(oldR.right - oldR.left >= newR.right - newR.left && oldR.bottom - oldR.top >= newR.bottom - newR.top)
-                newR = oldR;
-        }
+    //for(auto &[w, t]: oldWindowMonitor)
+    //    if(oldWindowRects.count(w))
+    //    {
+    //        const RECT& oldR = oldWindowRects[w];
+    //        RECT& newR = get<2>(oldWindowMonitor[w]);
+    //        if(oldR.right - oldR.left >= newR.right - newR.left && oldR.bottom - oldR.top >= newR.bottom - newR.top)
+    //            newR = oldR;
+    //    }
 
     // sort windows according to size and distribute them in corners
     map<HMONITOR, multimap<size_t, pair<HWND, Corner>>> windowsOnMonitor;
@@ -417,6 +421,8 @@ void processAllWindows(bool force)
     }
 
     arrangeWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
+    // save window sizes after adjustment for size change detection to remain stable
+    for (auto& [w, mcr] : oldWindowMonitor) if (windowRects.count(w)) get<2>(mcr) = windowRects[w];
 }
 
 bool toggleMinimizeAllWindows()
