@@ -85,7 +85,7 @@ map<HWND, pair<string, string>> windowTitles;
 map<HWND, tuple<HMONITOR, Corner, Rect>> oldWindowMonitor; /// previous windows placement for tracking changes
 vector<HWND> bulkMinimizedWindows;
 set<HWND> unmovableWindows;
-
+double sf0 = 0;
 // WINDOWS UTILITY FUNCTIONS
 
 string GetProcessNameFromHWND(HWND hwnd)
@@ -187,17 +187,22 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
     const map<HMONITOR, Rect>& monitorRects,
     map<HWND, Rect>& windowRects)
 {
-    HMONITOR primaryMonitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTOPRIMARY);
     UINT dpiX, dpiY;
-    GetDpiForMonitor(primaryMonitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
-    double sf0 = 100 * dpiY / 96.0; // scaling factor of primary monitor for theme size correction
+    if (sf0 == 0)
+    {
+        HMONITOR primaryMonitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTOPRIMARY);
+        GetDpiForMonitor(primaryMonitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
+        sf0 = 100 * dpiY / 96.0; // scaling factor of primary monitor for theme size correction
+        cerr << "sf0=" << sf0 << '%' << endl;
+    }
     for(auto &[mon, mcvw]: windowsOrderInCorners)
     {
-        int borderWidth = 0;
         int unitSize = 16;
         GetDpiForMonitor(mon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
         double sf = 100 * dpiY / 96.0;
         HTHEME theme = nullptr;
+        int borderWidth = 0;
+        int borderHeight = 0;
         auto mrect = monitorRects.at(mon);
         // 1° distribute windows in corners
         for(auto &[corner, windows]: mcvw)
@@ -207,9 +212,10 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 if(!theme)
                 {
                     theme = OpenThemeData(windows[i], L"WINDOW");
-                    borderWidth = GetThemeSysSize(theme, SM_CXPADDEDBORDER) * sf / sf0;
                     unitSize = (GetThemeSysSize(theme, SM_CYSIZE) + GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 2) * sf / sf0;
                     //cerr << monitorNames[mon] << ':' << sf << "%, " << unitSize << "px" << endl;
+                    borderHeight = GetThemeSysSize(theme, SM_CXPADDEDBORDER);
+                    borderWidth = borderHeight * sf / 100;
                 }
                 auto &wrect = windowRects.at(windows[i]);
                 flags<Corner, int> otherCorner;
@@ -238,8 +244,8 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 }
                 if(wrect.bottom - wrect.top + maxIncreaseY > mrect.bottom - mrect.top)
                 {
-                    wrect.top = mrect.top - borderWidth;
-                    wrect.bottom = mrect.bottom + borderWidth;
+                    wrect.top = mrect.top - borderHeight;
+                    wrect.bottom = mrect.bottom + borderHeight;
                 }
                 RECT newRect;
                 if(corner & Corner::right)
@@ -259,8 +265,8 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 }
                 else
                 {
-                    newRect.top = mrect.top - borderWidth + (windows.size() - i - 1) * unitSize;
-                    newRect.bottom = min(wrect.bottom + newRect.top - wrect.top, mrect.bottom - dy + borderWidth);
+                    newRect.top = mrect.top - borderHeight + (windows.size() - i - 1) * unitSize;
+                    newRect.bottom = min(wrect.bottom + newRect.top - wrect.top, mrect.bottom - dy + borderHeight);
                 }
                 wrect = newRect;
                 constexpr const char *cornerNames[] =
@@ -278,6 +284,7 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 cout << result << ']' << endl;
             }
         }
+        CloseThemeData(theme);
     }
 }
 
