@@ -183,15 +183,20 @@ void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner, int>, vector<
     }
 }
 
-void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> &windowsOrderInCorners,
-                    const map<HMONITOR, Rect> &monitorRects,
-                    map<HWND, Rect> &windowRects)
-
+void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, vector<HWND>>>& windowsOrderInCorners,
+    const map<HMONITOR, Rect>& monitorRects,
+    map<HWND, Rect>& windowRects)
 {
+    HMONITOR primaryMonitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTOPRIMARY);
+    UINT dpiX, dpiY;
+    GetDpiForMonitor(primaryMonitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
+    double sf0 = 100 * dpiY / 96.0; // scaling factor of primary monitor for theme size correction
     for(auto &[mon, mcvw]: windowsOrderInCorners)
     {
         int borderWidth = 0;
         int unitSize = 16;
+        GetDpiForMonitor(mon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
+        double sf = 100 * dpiY / 96.0;
         HTHEME theme = nullptr;
         auto mrect = monitorRects.at(mon);
         // 1° distribute windows in corners
@@ -201,11 +206,10 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
             {
                 if(!theme)
                 {
-                    DEVICE_SCALE_FACTOR sf;
-                    GetScaleFactorForMonitor(mon, &sf);
                     theme = OpenThemeData(windows[i], L"WINDOW");
-                    borderWidth = GetThemeSysSize(theme, SM_CXPADDEDBORDER) * sf / 100;
-                    unitSize = (GetThemeSysSize(theme, SM_CYSIZE) + GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 2) * sf / 100;
+                    borderWidth = GetThemeSysSize(theme, SM_CXPADDEDBORDER) * sf / sf0;
+                    unitSize = (GetThemeSysSize(theme, SM_CYSIZE) + GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 2) * sf / sf0;
+                    //cerr << monitorNames[mon] << ':' << sf << "%, " << unitSize << "px" << endl;
                 }
                 auto &wrect = windowRects.at(windows[i]);
                 flags<Corner, int> otherCorner;
