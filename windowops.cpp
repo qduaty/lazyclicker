@@ -31,6 +31,8 @@ enum class Corner : int { top = 0, left = 0, topleft = top | left, right = 1, to
 
 struct Rect : public RECT
 {
+    constexpr size_t width() const { return right - left; }
+    constexpr size_t height() const { return bottom - top; }
     constexpr size_t area() const { return (bottom - top) * (right - left); }
 
     size_t diameter() const
@@ -139,7 +141,7 @@ BOOL IsAltTabWindow(HWND hwnd)
 
 BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
 {
-    auto &windows = *reinterpret_cast<map<HWND, RECT>*>(lParam);
+    auto &windows = *reinterpret_cast<map<HWND, Rect>*>(lParam);
     if(!IsAltTabWindow(hWnd)) return TRUE;
 
     int length = GetWindowTextLength(hWnd);
@@ -147,7 +149,7 @@ BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
     auto buffer = make_unique<char[]>(length + 1);
     GetWindowTextA(hWnd, buffer.get(), length + 1);
 
-    RECT &rect = windows[hWnd];
+    Rect &rect = windows[hWnd];
     GetWindowRect(hWnd, &rect);
     string processName = GetProcessNameFromHWND(hWnd);
     if (processName == "ApplicationFrameHost.exe" || IsIconic(hWnd))
@@ -340,6 +342,15 @@ void processAllWindows(bool force)
     EnumWindows(enumWindowsProc, reinterpret_cast<LPARAM>(&windowRects));
     // int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
     // int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+    // unmaximize windows to get rid of related issues
+    for (auto& [w, r] : windowRects)
+        if (IsZoomed(w))
+        {
+            ShowWindow(w, SW_RESTORE);
+            MoveWindow(w, r.left, r.top, r.width(), r.height(), true);
+        }
+
 
     // find main monitor for each window
     map<HWND, tuple<HMONITOR, Corner, Rect>> windowMonitor;
