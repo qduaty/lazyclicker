@@ -6,6 +6,7 @@
 #include <psapi.h>
 #include <uxtheme.h>
 #include <shellscalingapi.h>
+#include <array>
 
 using namespace std;
 
@@ -227,7 +228,7 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 long dx0 = (mcvw.at(otherCorner).size()) * unitSize;
                 // 2°
                 otherCorner = corner ^ int(Corner::bottom);
-                long dy = int(mcvw.at(otherCorner).size()) * unitSize;
+                long dy = int(mcvw.at(otherCorner).size() - 1) * unitSize;
                 // 3°
                 otherCorner = corner ^ int(Corner::bottomright);
                 long dx = max(dx0, long(mcvw.at(otherCorner).size() * unitSize) - dy);
@@ -434,31 +435,25 @@ void processAllWindows(bool force)
     // sort windows according to size and distribute them in corners
     map<HMONITOR, multimap<size_t, pair<HWND, Corner>>> windowsOnMonitor;
     for(auto &[w, mc]: windowMonitor)
-        windowsOnMonitor[get<0>(mc)].insert({windowRects[w].area(), {w, get<1>(mc)}});
+        windowsOnMonitor[get<0>(mc)].insert({windowRects[w].height(), {w, get<1>(mc)}});
     map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> windowsOrderInCorners;
     for(auto &[m, mwc]: windowsOnMonitor)
     {
-        int numSmallWindows = 0;
-        int numBigWindows = 0;
+        for(int i = 0; i < 4; i++) windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
         auto mr = monitorRects[m];
-        for(auto&[s, wc]: mwc)
+        int i = 0;
+        std::array<Corner, 4> corners { Corner::topleft, Corner::bottomleft, Corner::topright, Corner::bottomright };
+        bool smallWindowsEnded = false;
+        for (auto& [s, wc] : mwc)
         {
-            auto wr = windowRects[wc.first];
-            if(wr.width() < 0.9 * mr.width() && wr.height() < 0.9 * mr.height()) numSmallWindows++;
-            else numBigWindows++;
-        }
-        for(int i = 0; i < 4; i++)
-        {
-            windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
-        }
-        constexpr Corner corners[] {Corner::bottomleft, Corner::topleft, Corner::topright, Corner::bottomright};
-        int i = (numSmallWindows > 1 && numBigWindows > 0) ? 0 : 1;
-        for(auto&[s, wc]: mwc)
-            if (!unmovableWindows.count(wc.first)) 
+            if (!smallWindowsEnded && s >= 0.9 * mr.height())
             {
-                windowsOrderInCorners[m][corners[i % 4]].push_back(wc.first);
-                i++;
+                smallWindowsEnded = true;
+                i = 0;
+                corners = { Corner::topleft, Corner::topright, Corner::bottomleft, Corner::bottomright };
             }
+            if (!unmovableWindows.count(wc.first)) windowsOrderInCorners[m][corners[i++ % 4]].push_back(wc.first);
+        }
     }
 
     arrangeWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
