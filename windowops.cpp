@@ -434,7 +434,7 @@ void processAllWindows(bool force)
     // sort windows according to size and distribute them in corners
     map<HMONITOR, multimap<size_t, pair<HWND, Corner>>> windowsOnMonitor;
     for(auto &[w, mc]: windowMonitor)
-        windowsOnMonitor[get<0>(mc)].insert({max(windowRects[w].width(), windowRects[w].height()), {w, get<1>(mc)}});
+        windowsOnMonitor[get<0>(mc)].insert({windowRects[w].area(), {w, get<1>(mc)}});
     map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> windowsOrderInCorners;
     for(auto &[m, mwc]: windowsOnMonitor)
     {
