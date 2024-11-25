@@ -27,7 +27,8 @@ template<typename E, typename I>struct flags {
     bool operator==(E x) const { return v == I(x); }
 };
 
-enum class Corner : int { top = 0, left = 0, topleft = top | left, right = 1, topright = top | right, bottom = 2, bottomleft = bottom | left, bottomright = bottom | right };
+enum class Corner : int { top = 0, left = 0, topleft = top | left, right = 1, topright = top | right,
+                          bottom = 2, bottomleft = bottom | left, bottomright = bottom | right };
 
 struct Rect : public RECT
 {
@@ -432,16 +433,20 @@ void processAllWindows(bool force)
 
     // sort windows according to size and distribute them in corners
     map<HMONITOR, multimap<size_t, pair<HWND, Corner>>> windowsOnMonitor;
-    for(auto &[w, mc]: windowMonitor) windowsOnMonitor[get<0>(mc)].insert({windowRects[w].area(), {w, get<1>(mc)}});
+    for(auto &[w, mc]: windowMonitor)
+        windowsOnMonitor[get<0>(mc)].insert({max(windowRects[w].width(), windowRects[w].height()), {w, get<1>(mc)}});
     map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> windowsOrderInCorners;
     for(auto &[m, mwc]: windowsOnMonitor)
     {
         int numSmallWindows = 0;
         int numBigWindows = 0;
-        auto monArea = monitorRects[m].area();
+        auto mr = monitorRects[m];
         for(auto&[s, wc]: mwc)
-            if(s < 0.9 * monArea) numSmallWindows++;
+        {
+            auto wr = windowRects[wc.first];
+            if(wr.width() < 0.9 * mr.width() && wr.height() < 0.9 * mr.height()) numSmallWindows++;
             else numBigWindows++;
+        }
         for(int i = 0; i < 4; i++)
         {
             windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist

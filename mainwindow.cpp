@@ -16,12 +16,14 @@ MainWindow::MainWindow(QWidget *parent):
     connect(trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::iconActivated);
     auto trayIconMenu = new QMenu(this);
     connect(ui->actionQuit_and_unregister, &QAction::triggered, this, &MainWindow::quitAndUnregister);
+    connect(ui->actionQuit, &QAction::triggered, []{ QCoreApplication::instance()->quit(); });
     trayIconMenu->addAction(ui->actionAuto_arrange_windows);
+    trayIconMenu->addAction(ui->actionQuit);
     trayIconMenu->addAction(ui->actionQuit_and_unregister);
     trayIcon->setContextMenu(trayIconMenu);
     registerForStartup();
     timer.setInterval(1000);
-    connect(&timer, &QTimer::timeout, processAllWindows);
+    connect(&timer, &QTimer::timeout, []{processAllWindows();});
 }
 
 MainWindow::~MainWindow()
