@@ -231,7 +231,7 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 long dy = int(mcvw.at(otherCorner).size() - 1) * unitSize;
                 // 3°
                 otherCorner = corner ^ int(Corner::bottomright);
-                long dx = max(dx0, long(mcvw.at(otherCorner).size() * unitSize) - dy);
+                long dx = max(dx0, long(mcvw.at(otherCorner).size() * unitSize));
                 //long maxIncreaseX = windowsWithSizeChanged.count(windows[i]) ? 0 : windowops_maxIncrease;
                 long maxIncreaseX = windowops_maxIncrease;
                 long maxIncreaseY = maxIncreaseX;
