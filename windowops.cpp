@@ -288,7 +288,7 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 cout << result << ']' << endl;
             }
         }
-        CloseThemeData(theme);
+        if(theme) CloseThemeData(theme);
     }
 }
 
@@ -442,7 +442,7 @@ void processAllWindows(bool force)
         for(int i = 0; i < 4; i++) windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
         auto mr = monitorRects[m];
         int i = 0;
-        std::array<Corner, 4> corners { Corner::topleft, Corner::bottomleft, Corner::topright, Corner::bottomright };
+        std::array<Corner, 4> corners { Corner::topright, Corner::bottomright, Corner::topleft, Corner::bottomleft };
         bool smallWindowsEnded = false;
         for (auto& [s, wc] : mwc)
         {
@@ -452,7 +452,11 @@ void processAllWindows(bool force)
                 i = 0;
                 corners = { Corner::topleft, Corner::topright, Corner::bottomleft, Corner::bottomright };
             }
-            if (!unmovableWindows.count(wc.first)) windowsOrderInCorners[m][corners[i++ % 4]].push_back(wc.first);
+            if (!unmovableWindows.count(wc.first)) 
+            { 
+                windowsOrderInCorners[m][corners[i % 4]].push_back(wc.first); 
+                i++;
+            }
         }
     }
 
