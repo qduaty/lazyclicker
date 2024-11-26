@@ -228,7 +228,7 @@ void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, 
                 long dx0 = (mcvw.at(otherCorner).size()) * unitSize;
                 // 2°
                 otherCorner = corner ^ int(Corner::bottom);
-                long dy = int(mcvw.at(otherCorner).size() - 1) * unitSize;
+                long dy = int(mcvw.at(otherCorner).size()) * unitSize;
                 // 3°
                 otherCorner = corner ^ int(Corner::bottomright);
                 long dx = max(dx0, long(mcvw.at(otherCorner).size() * unitSize));
