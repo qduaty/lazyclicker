@@ -12,6 +12,8 @@ constexpr TCHAR settingsKey[] = _T("Software\\qduaty\\lazyclicker\\Preferences")
 constexpr TCHAR startupKey[] = _T("Software\\Microsoft\\Windows\\CurrentVersion\\Run");
 class CMainWnd;
 
+using namespace std;
+
 class CSettingsDlg : public CDialogImpl<CSettingsDlg>
 {
 public:
@@ -88,13 +90,13 @@ public:
         SetTimer(1, 1000);
 
         auto hInstance = HINSTANCE(GetWindowLongPtr(GWLP_HINSTANCE));
-        m_bAutoArrange = readRegistryValue<std::wstring, REG_SZ>(settingsKey, L"actionAuto_arrange_windows") == L"true";
+        m_bAutoArrange = readRegistryValue<wstring, REG_SZ>(settingsKey, L"actionAuto_arrange_windows") == L"true";
         updateTrayIcon(true);
         windowops_maxIncrease = readRegistryValue<DWORD, REG_DWORD>(settingsKey, L"allowedIncrease").value_or(0);
         settingsDlg.allowedIncrease = windowops_maxIncrease;
         TCHAR processName[MAX_PATH] = { 0 };
         if (GetModuleFileName(hInstance, processName, MAX_PATH))
-            writeRegistryValue<std::wstring, REG_SZ>(startupKey, L"lazyclicker", processName);
+            writeRegistryValue<wstring, REG_SZ>(startupKey, L"lazyclicker", processName);
 
         return 0;
     }
@@ -139,7 +141,7 @@ public:
         {
         case ID_TRAYMENU_OPTION_AUTO_ARRANGE:
             m_bAutoArrange = !m_bAutoArrange;
-            writeRegistryValue<std::wstring, REG_SZ>(settingsKey, L"actionAuto_arrange_windows", m_bAutoArrange ? L"true" : L"false");
+            writeRegistryValue<wstring, REG_SZ>(settingsKey, L"actionAuto_arrange_windows", m_bAutoArrange ? L"true" : L"false");
             updateTrayIcon(false);
             break;
         case ID_TRAYMENU_OPTION_QUIT:
@@ -183,7 +185,7 @@ private:
         nid.uCallbackMessage = WM_TRAYICON;
         auto hInstance = HINSTANCE(GetWindowLongPtr(GWLP_HINSTANCE));
         nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_LAZYCLICKER));
-        LoadString(hInstance, (m_bAutoArrange ? IDS_APPTOOLTIP2 : IDS_APPTOOLTIP1), nid.szTip, std::size(nid.szTip));
+        LoadString(hInstance, (m_bAutoArrange ? IDS_APPTOOLTIP2 : IDS_APPTOOLTIP1), nid.szTip, size(nid.szTip));
         Shell_NotifyIcon(create ? NIM_ADD : NIM_MODIFY, &nid);
     }
 
@@ -209,7 +211,7 @@ private:
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpCmdLine, int nCmdShow)
 {
-    if (lpCmdLine == std::wstring_view(L"--console")) CreateConsole();
+    if (lpCmdLine == wstring_view(L"--console")) CreateConsole();
     _Module.Init(nullptr, hInstance);
 
     CMainWnd wnd;

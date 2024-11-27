@@ -1,9 +1,9 @@
 #ifndef WINDOWOPS_H
 #define WINDOWOPS_H
-#include <windows.h>
+#include <Windows.h>
 #include <optional>
-#include <string>
 #include <iostream>
+
 
 extern int windowops_maxIncrease;
 
@@ -14,17 +14,16 @@ void processAllWindows(bool force = false);
 bool toggleMinimizeAllWindows();
 
 template<typename T, int RegType> inline std::optional<T> 
-readRegistryValue(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name)
+readRegistryValue(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name)
 {
     HKEY hKey;
     std::optional<T> result;
     if (RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_READ, &hKey) == ERROR_SUCCESS)
     {
         DWORD dataType;
-        DWORD dataSize;
-        if (RegQueryValueEx(hKey, name.data(), NULL, &dataType, NULL, &dataSize) == ERROR_SUCCESS && dataType == RegType)
+        if (DWORD dataSize; RegQueryValueEx(hKey, name.data(), NULL, &dataType, NULL, &dataSize) == ERROR_SUCCESS && dataType == RegType)
         {
-            BYTE* data = new BYTE[dataSize];
+            auto data = new BYTE[dataSize];
             if (RegQueryValueEx(hKey, name.data(), NULL, &dataType, data, &dataSize) == ERROR_SUCCESS)
                 result = *reinterpret_cast<T*>(data);
             delete[] data;
@@ -35,11 +34,11 @@ readRegistryValue(const std::basic_string_view<TCHAR> key, const std::basic_stri
 }
 
 template<typename T, int RegType>inline bool
-writeRegistryValue(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name, const T& v)
+writeRegistryValue(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name, const T& v)
 {
     HKEY hKey;
     bool result = false;
-    if (RegCreateKeyEx(HKEY_CURRENT_USER, key.data(), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS)
+    if (RegCreateKeyEx(HKEY_CURRENT_USER, key.data(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS)
     {
         if (RegSetValueEx(hKey, name.data(), 0, RegType, (const BYTE*)&v, sizeof(T)) == ERROR_SUCCESS)
         {
@@ -60,11 +59,11 @@ writeRegistryValue(const std::basic_string_view<TCHAR> key, const std::basic_str
 }
 
 template<> std::optional<std::wstring>
-readRegistryValue<std::wstring, REG_SZ>(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name);
+readRegistryValue<std::wstring, REG_SZ>(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name);
 template<>bool
-writeRegistryValue<std::wstring, REG_SZ>(const std::basic_string_view<TCHAR> key, const std::basic_string_view<TCHAR> name, const std::wstring& v);
-bool deleteRegistryValue(const std::basic_string<TCHAR>& key, const std::basic_string<TCHAR>& name);
-bool deleteRegistrySubkey(const std::basic_string<TCHAR>& key, const std::basic_string<TCHAR>& name);
+writeRegistryValue<std::wstring, REG_SZ>(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name, const std::wstring& v);
+bool deleteRegistryValue(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name);
+bool deleteRegistrySubkey(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name);
 /// <summary>
 /// Create win32 console in order to access standard pipes
 /// </summary>
