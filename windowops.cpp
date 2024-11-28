@@ -290,7 +290,8 @@ static void arrangeWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner,
 static pair<HMONITOR, Corner> findMainMonitorAndCorner(HWND w, Rect const &wrect, const map<HMONITOR, Rect> &monitorRects)
 {
     size_t maxArea = 0;
-    pair<HMONITOR, Corner> result = {};
+    HMONITOR mon = nullptr;
+    Corner corner = Corner::topleft;
     for(auto &[m, r]: monitorRects)
     {
         Rect rect {};
@@ -298,26 +299,25 @@ static pair<HMONITOR, Corner> findMainMonitorAndCorner(HWND w, Rect const &wrect
         size_t area = rect.area();
         if (area > maxArea)
         {
-            result.first = m;
+            mon = m;
             maxArea = area;
         }
     }
-    if(result.first)
+    if(mon)
     {
-        Rect mrect = monitorRects.at(result.first);
+        Rect mrect = monitorRects.at(mon);
         auto minDist = mrect.diameter();
-        Corner selectedCorner;
         for(int i = 0; i < 4; i++)
         {
             int dist = wrect.distanceFromCorner(mrect, Corner(i));
             if(dist < minDist)
             {
                 minDist = dist;
-                selectedCorner = Corner(i);
+                corner = Corner(i);
             }
         }
     }
-    return result;
+    return { mon, corner };
 }
 
 // API FUNCTIONS
@@ -375,7 +375,6 @@ void processAllWindows(bool force)
             ShowWindow(w, SW_RESTORE);
             MoveWindow(w, r.left, r.top, int(r.width()), int(r.height()), true);
         }
-
 
     // find main monitor for each window
     map<HWND, tuple<HMONITOR, Corner, Rect>> windowMonitor;
