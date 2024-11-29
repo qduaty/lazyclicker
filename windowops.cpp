@@ -190,7 +190,7 @@ static void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner, int>, 
     }
 }
 
-static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, list<HWND>>>& windowsOrderInCorners,
+static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, multimap<size_t, HWND>>>& windowsOrderInCorners,
     const map<HMONITOR, Rect>& monitorRects,
     map<HWND, Rect>& windowRects)
 {
@@ -216,7 +216,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
         for(auto &[corner, windows]: mcvw)
         {
             int i = 0;
-            for(auto &w : windows)
+            for(auto &[s, w] : windows)
             {
                 if(!theme)
                 {
@@ -330,7 +330,7 @@ static pair<HMONITOR, Corner> findMainMonitorAndCorner(Rect const &wrect, const 
 
 // API FUNCTIONS
 
-static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, list<HWND>>>& windowsOrderInCorners, 
+static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, multimap<size_t, HWND>>>& windowsOrderInCorners,
                                        const map<HMONITOR, multimap<size_t, pair<HWND, Corner>>>& windowsOnMonitor,
                                        const set<HWND>& newWindows, // TODO use this to tell windows that require corner assignment from preexisting ones
                                        const map<HMONITOR, Rect>& monitorRects)
@@ -342,7 +342,7 @@ static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, lis
         {
             auto& [w, c] = wc;
             if (newWindows.count(w) || unmovableWindows.count(w)) continue;
-            windowsOrderInCorners[m][c].push_back(w);
+            windowsOrderInCorners[m][c].insert({ s, w });
         }
     }
     for (auto& [m, mwc] : windowsOnMonitor)
@@ -381,7 +381,7 @@ static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, lis
                     corner = corners[i % 4];
                     i++;
                 }
-                windowsOrderInCorners[m][corner].push_back(wc.first); // TODO replace with map to always sort according to 's'
+                windowsOrderInCorners[m][corner].insert({s, w});
             }
         }
     }
@@ -469,7 +469,7 @@ void processAllWindows(bool force)
              << rect.right << ':' << rect.bottom << endl;
     }
 
-    map<HMONITOR, map<flags<Corner, int>, list<HWND>>> windowsOrderInCorners;
+    map<HMONITOR, map<flags<Corner, int>, multimap<size_t, HWND>>> windowsOrderInCorners;
     map<HMONITOR, multimap<size_t, pair<HWND, Corner>>> windowsOnMonitor;
     for(auto &[w, mc]: windowMonitor) windowsOnMonitor[get<HMONITOR>(mc)].insert({windowRects[w].height(), {w, get<Corner>(mc)}});
     distributeWindowsInCorners(windowsOrderInCorners, windowsOnMonitor, newWindows, monitorRects);
