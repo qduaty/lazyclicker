@@ -7,6 +7,7 @@
 #include <shellscalingapi.h>
 #include <array>
 #include <list>
+#include <queue>
 
 using namespace std;
 
@@ -337,12 +338,30 @@ static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, lis
     for (auto& [m, mwc] : windowsOnMonitor)
     {
         for (int i = 0; i < 4; i++) windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
-        auto const &mr = monitorRects.at(m);
+        for (auto& [s, wc] : mwc)
+        {
+            auto& [w, c] = wc;
+            if (newWindows.count(w) || unmovableWindows.count(w)) continue;
+            windowsOrderInCorners[m][c].push_back(w);
+        }
+    }
+    for (auto& [m, mwc] : windowsOnMonitor)
+    {
+        queue<Corner> freeCorners;
+        size_t maxNumWindows = 0;
+        for (auto const& [c, vw] : windowsOrderInCorners[m]) maxNumWindows = max(maxNumWindows, vw.size());
+        for (auto const& [c, vw] : windowsOrderInCorners[m]) for (int i = 0; i < maxNumWindows - vw.size(); i++) freeCorners.push(Corner(int(c)));
+
+        auto const& mr = monitorRects.at(m);
+
         int i = 0;
         array<Corner, 4> corners{ Corner::topright, Corner::bottomright, Corner::topleft, Corner::bottomleft };
         bool smallWindowsEnded = false;
         for (auto& [s, wc] : mwc)
         {
+            auto& [w, c] = wc;
+            if (!newWindows.count(w) || unmovableWindows.count(w)) continue;
+
             if (!smallWindowsEnded && s >= mr.height() * 9 / 10)
             {
                 smallWindowsEnded = true;
@@ -351,8 +370,18 @@ static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, lis
             }
             if (!unmovableWindows.count(wc.first))
             {
-                windowsOrderInCorners[m][corners[i % 4]].push_back(wc.first);
-                i++;
+                Corner corner; 
+                if (freeCorners.size())
+                {
+                    corner = freeCorners.front();
+                    freeCorners.pop();
+                }
+                else
+                {
+                    corner = corners[i % 4];
+                    i++;
+                }
+                windowsOrderInCorners[m][corner].push_back(wc.first); // TODO replace with map to always sort according to 's'
             }
         }
     }
