@@ -191,6 +191,19 @@ static void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner, int>, 
     }
 }
 
+static bool loadThemeData(const HWND& w, int& unitSize, double sf, int& borderHeight, int& borderWidth)
+{
+    if (HTHEME theme = OpenThemeData(w, L"WINDOW"))
+    {
+        unitSize = int((GetThemeSysSize(theme, SM_CYSIZE) + GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 2) * sf / sf0);
+        borderHeight = GetThemeSysSize(theme, SM_CXPADDEDBORDER);
+        borderWidth = int(borderHeight * sf / 100);
+        CloseThemeData(theme);
+        return true;
+    }
+    return false;
+}
+
 static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, multimap<size_t, HWND>>>& windowsOrderInCorners,
     const map<HMONITOR, Rect>& monitorRects,
     map<HWND, Rect>& windowRects)
@@ -206,27 +219,20 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
     }
     for(auto &[mon, mcvw]: windowsOrderInCorners)
     {
-        int unitSize = 16;
         GetDpiForMonitor(mon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
         double sf = 100 * dpiY / 96.0;
-        HTHEME theme = nullptr;
+        int unitSize = 16;
         int borderWidth = 0;
         int borderHeight = 0;
         auto &mrect = monitorRects.at(mon);
+        for (auto &[_, windows] : mcvw)
+            if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), unitSize, sf, borderHeight, borderWidth)) break;
         // 1° distribute windows in corners
         for(auto &[corner, windows]: mcvw)
         {
             int i = 0;
             for(auto &[s, w] : windows)
             {
-                if(!theme)
-                {
-                    theme = OpenThemeData(w, L"WINDOW");
-                    unitSize = int((GetThemeSysSize(theme, SM_CYSIZE) + GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 2) * sf / sf0);
-                    borderHeight = GetThemeSysSize(theme, SM_CXPADDEDBORDER);
-                    borderWidth = int(borderHeight * sf / 100);
-                }
-                auto &wrect = windowRects.at(w);
                 flags<Corner, int> otherCorner;
                 // 1°
                 otherCorner = corner ^ int(Corner::right);
@@ -239,12 +245,15 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
                 long dx = max(dx0, long(mcvw.at(otherCorner).size()) * unitSize);
                 long maxIncreaseX = windowops_maxIncrease;
                 long maxIncreaseY = maxIncreaseX;
+                bool result = false;
+                auto &wrect = windowRects.at(w);
                 if(oldWindowMonitor.contains(w))
                 {
                     auto &oldWrect = get<Rect>(oldWindowMonitor[w]);
                     maxIncreaseX = max(maxIncreaseX, oldWrect.right - oldWrect.left - (wrect.right - wrect.left));
                     maxIncreaseY = max(maxIncreaseY, oldWrect.bottom - oldWrect.top - (wrect.bottom - wrect.top));
                 }
+
                 if(wrect.right - wrect.left + maxIncreaseX > mrect.right - mrect.left)
                 {
                     wrect.left = mrect.left - borderWidth;
@@ -281,7 +290,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
                 cout << "Moving window " << w << '(' << monitorNames[mon] << '@';
                 cout << cornerNames[int(corner)] << ':' << i << ')' <<" to relative: " << wrect.left - mrect.left << ':';
                 cout << wrect.top - mrect.top << ':' << wrect.right - mrect.right << ':' << wrect.bottom - mrect.bottom << '[';
-                auto result = MoveWindow(w, wrect.left, wrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
+                result = MoveWindow(w, wrect.left, wrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
                 if (!result)
                 {
                     unmovableWindows.insert(w);
@@ -292,7 +301,6 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
                 i++;
             }
         }
-        if(theme) CloseThemeData(theme);
     }
 }
 
@@ -331,8 +339,40 @@ static pair<HMONITOR, Corner> findMainMonitorAndCorner(Rect const &wrect, const 
 
 // API FUNCTIONS
 
+static void distributeNewWindowsInCorners(std::multimap<size_t, std::pair<HWND, Corner>>& mwc, const std::set<HWND>& newWindows, 
+    const Rect& mr, std::queue<Corner>& freeCorners, std::map<flags<Corner, int>, std::multimap<size_t, HWND>>& order)
+{
+    using enum Corner;
+    int i = 0;
+    array<Corner, 4> corners{ topright, bottomright, topleft, bottomleft };
+    bool smallWindowsEnded = false;
+    for (auto& [s, wc] : mwc)
+    {
+        auto& [w, c] = wc;
+        if (!newWindows.contains(w) || unmovableWindows.contains(w)) continue;
+
+        if (!smallWindowsEnded && s >= mr.height() * 9 / 10)
+        {
+            smallWindowsEnded = true;
+            i = 0;
+            corners = { topleft, topright, bottomleft, bottomright };
+        }
+        if (freeCorners.size())
+        {
+            c = freeCorners.front();
+            freeCorners.pop();
+        }
+        else
+        {
+            c = corners[i % 4];
+            i++;
+        }
+        order[c].insert({ s, w });
+    }
+}
+
 static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, multimap<size_t, HWND>>>& windowsOrderInCorners,
-                                       const map<HMONITOR, multimap<size_t, pair<HWND, Corner>>>& windowsOnMonitor,
+                                       map<HMONITOR, multimap<size_t, pair<HWND, Corner>>>& windowsOnMonitor,
                                        const set<HWND>& newWindows,
                                        const map<HMONITOR, Rect>& monitorRects)
 {
@@ -345,46 +385,15 @@ static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, mul
             if (newWindows.contains(w) || unmovableWindows.contains(w)) continue;
             windowsOrderInCorners[m][c].insert({ s, w });
         }
-    }
-    for (auto& [m, mwc] : windowsOnMonitor)
-    {
+
         queue<Corner> freeCorners;
         size_t maxNumWindows = 0;
         for (auto const& [c, vw] : windowsOrderInCorners[m]) maxNumWindows = max(maxNumWindows, vw.size());
-        for (auto const& [c, vw] : windowsOrderInCorners[m]) for (int i = 0; i < maxNumWindows - vw.size(); i++) freeCorners.push(Corner(int(c)));
+        for (auto const& [c, vw] : windowsOrderInCorners[m]) 
+            for (int i = 0; i < maxNumWindows - vw.size(); i++) 
+                freeCorners.push(Corner(int(c)));
 
-        auto const& mr = monitorRects.at(m);
-
-        int i = 0;
-        array<Corner, 4> corners{ Corner::topright, Corner::bottomright, Corner::topleft, Corner::bottomleft };
-        bool smallWindowsEnded = false;
-        for (auto& [s, wc] : mwc)
-        {
-            auto& [w, c] = wc;
-            if (!newWindows.contains(w) || unmovableWindows.contains(w)) continue;
-
-            if (!smallWindowsEnded && s >= mr.height() * 9 / 10)
-            {
-                smallWindowsEnded = true;
-                i = 0;
-                corners = { Corner::topleft, Corner::topright, Corner::bottomleft, Corner::bottomright };
-            }
-            if (!unmovableWindows.contains(wc.first))
-            {
-                Corner corner; 
-                if (freeCorners.size())
-                {
-                    corner = freeCorners.front();
-                    freeCorners.pop();
-                }
-                else
-                {
-                    corner = corners[i % 4];
-                    i++;
-                }
-                windowsOrderInCorners[m][corner].insert({s, w});
-            }
-        }
+        distributeNewWindowsInCorners(mwc, newWindows, monitorRects.at(m), freeCorners, windowsOrderInCorners[m]);
     }
 }
 
