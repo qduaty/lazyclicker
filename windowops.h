@@ -3,7 +3,7 @@
 #include <Windows.h>
 #include <optional>
 #include <iostream>
-
+#include <bit>
 
 extern int windowops_maxIncrease;
 
@@ -21,12 +21,11 @@ readRegistryValue(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHA
     if (RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_READ, &hKey) == ERROR_SUCCESS)
     {
         DWORD dataType;
-        if (DWORD dataSize; RegQueryValueEx(hKey, name.data(), NULL, &dataType, NULL, &dataSize) == ERROR_SUCCESS && dataType == RegType)
+        if (DWORD dataSize; RegQueryValueEx(hKey, name.data(), nullptr, &dataType, nullptr, &dataSize) == ERROR_SUCCESS && dataType == RegType)
         {
-            auto data = new BYTE[dataSize];
-            if (RegQueryValueEx(hKey, name.data(), NULL, &dataType, data, &dataSize) == ERROR_SUCCESS)
-                result = *reinterpret_cast<T*>(data);
-            delete[] data;
+            auto data = std::make_unique<BYTE[]>(dataSize);
+            if (RegQueryValueEx(hKey, name.data(), nullptr, &dataType, data.get(), &dataSize) == ERROR_SUCCESS)
+                result = *std::bit_cast<T*>(data.get());
         }
         RegCloseKey(hKey);
     }

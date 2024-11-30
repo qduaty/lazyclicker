@@ -1,4 +1,4 @@
-﻿#include <windows.h>
+﻿#include <Windows.h>
 #include <atlbase.h>
 #include <atlapp.h>
 #include <atlcrack.h>
@@ -34,9 +34,7 @@ public:
         RECT sliderRect;
         m_slider.GetClientRect(&sliderRect);
         m_slider.SetRange(0, sliderRect.right - sliderRect.left);
-//        slider.SetRange(0, 100);
         m_slider.SetPos(allowedIncrease);
-        // CUpDownCtrl spin = GetDlgItem(IDC_SPIN1);
         return TRUE;
     }
 
@@ -47,11 +45,11 @@ public:
         return 0;
     }
 
-    void OnHScroll(int nScrollCode, short nPos, HWND hwndScrollBar);
+    void OnHScroll(int nScrollCode, short [[maybe_unused]] nPos, HWND hwndScrollBar);
 
-    CMainWnd* pMainWindow = nullptr;
-    int allowedIncrease;
+    int allowedIncrease = 0;
 private:
+    CMainWnd* pMainWindow = nullptr;
     CTrackBarCtrl m_slider;
 };
 
@@ -70,14 +68,14 @@ public:
         MESSAGE_HANDLER(WM_SLIDER_CHANGE, OnSliderChange)
     END_MSG_MAP()
 
-    LRESULT OnTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+    LRESULT OnTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) const
     {
         if (m_bAutoArrange)
             processAllWindows();
         return 0;
     }
 
-    LRESULT OnSliderChange(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+    LRESULT OnSliderChange(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/) const
     {
         windowops_maxIncrease = static_cast<int>(wParam);
         writeRegistryValue<DWORD, REG_DWORD>(settingsKey, L"allowedIncrease", windowops_maxIncrease);
@@ -135,7 +133,7 @@ public:
         return 0;
     }
 
-    LRESULT OnCommand(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+    LRESULT OnCommand(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL const& /*bHandled*/)
     {
         switch (LOWORD(wParam))
         {
@@ -215,8 +213,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
     _Module.Init(nullptr, hInstance);
 
     CMainWnd wnd;
-    auto hWnd = wnd.Create(nullptr, CWindow::rcDefault, _T("WTL Tray App"), WS_OVERLAPPEDWINDOW, WS_EX_TRANSPARENT);
-    //wnd.ShowWindow(nCmdShow);
+    wnd.Create(nullptr, CWindow::rcDefault, _T("WTL Tray App"), WS_OVERLAPPEDWINDOW, WS_EX_TRANSPARENT);
     wnd.UpdateWindow();
 
     MSG msg;
@@ -230,7 +227,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
     return static_cast<int>(msg.wParam);
 }
 
-void CSettingsDlg::OnHScroll(int nScrollCode, short nPos, HWND hwndScrollBar)
+inline void CSettingsDlg::OnHScroll(int nScrollCode, short [[maybe_unused]] nPos, HWND hwndScrollBar)
 {
     if (nScrollCode == SB_ENDSCROLL && hwndScrollBar == m_slider.m_hWnd)
     {

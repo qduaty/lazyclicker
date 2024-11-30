@@ -2,9 +2,9 @@
 #include <map>
 #include <vector>
 #include <set>
-#include <psapi.h>
-#include <uxtheme.h>
-#include <shellscalingapi.h>
+#include <Psapi.h>
+#include <Uxtheme.h>
+#include <ShellScalingApi.h>
 #include <array>
 #include <list>
 #include <queue>
@@ -95,6 +95,7 @@ map<HWND, tuple<HMONITOR, Corner, Rect>> oldWindowMonitor; /// previous windows 
 vector<HWND> bulkMinimizedWindows;
 set<HWND> unmovableWindows;
 double sf0 = 0;
+
 // WINDOWS UTILITY FUNCTIONS
 
 static string GetProcessNameFromHWND(HWND hwnd)
@@ -147,7 +148,7 @@ static BOOL IsAltTabWindow(HWND hwnd)
 
 static BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
 {
-    auto &windows = *reinterpret_cast<map<HWND, Rect>*>(lParam);
+    auto &windows = *bit_cast<map<HWND, Rect>*>(lParam);
     if(!IsAltTabWindow(hWnd)) return TRUE;
 
     int length = GetWindowTextLength(hWnd);
@@ -168,7 +169,7 @@ static BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
 
 static BOOL CALLBACK enumMonitorsProc(HMONITOR monitor, HDC /*dc*/, LPRECT pRect, LPARAM lParam)
 {
-    auto &monitorRects = *reinterpret_cast<map<HMONITOR, RECT>*>(lParam);
+    auto &monitorRects = *bit_cast<map<HMONITOR, RECT>*>(lParam);
     monitorRects[monitor] = *pRect;
     return TRUE;
 }
@@ -238,7 +239,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
                 long dx = max(dx0, long(mcvw.at(otherCorner).size()) * unitSize);
                 long maxIncreaseX = windowops_maxIncrease;
                 long maxIncreaseY = maxIncreaseX;
-                if(oldWindowMonitor.count(w))
+                if(oldWindowMonitor.contains(w))
                 {
                     auto &oldWrect = get<Rect>(oldWindowMonitor[w]);
                     maxIncreaseX = max(maxIncreaseX, oldWrect.right - oldWrect.left - (wrect.right - wrect.left));
@@ -332,7 +333,7 @@ static pair<HMONITOR, Corner> findMainMonitorAndCorner(Rect const &wrect, const 
 
 static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, multimap<size_t, HWND>>>& windowsOrderInCorners,
                                        const map<HMONITOR, multimap<size_t, pair<HWND, Corner>>>& windowsOnMonitor,
-                                       const set<HWND>& newWindows, // TODO use this to tell windows that require corner assignment from preexisting ones
+                                       const set<HWND>& newWindows,
                                        const map<HMONITOR, Rect>& monitorRects)
 {
     for (auto& [m, mwc] : windowsOnMonitor)
@@ -341,7 +342,7 @@ static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, mul
         for (auto& [s, wc] : mwc)
         {
             auto& [w, c] = wc;
-            if (newWindows.count(w) || unmovableWindows.count(w)) continue;
+            if (newWindows.contains(w) || unmovableWindows.contains(w)) continue;
             windowsOrderInCorners[m][c].insert({ s, w });
         }
     }
@@ -360,7 +361,7 @@ static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, mul
         for (auto& [s, wc] : mwc)
         {
             auto& [w, c] = wc;
-            if (!newWindows.count(w) || unmovableWindows.count(w)) continue;
+            if (!newWindows.contains(w) || unmovableWindows.contains(w)) continue;
 
             if (!smallWindowsEnded && s >= mr.height() * 9 / 10)
             {
@@ -368,7 +369,7 @@ static void distributeWindowsInCorners(map<HMONITOR, map<flags<Corner, int>, mul
                 i = 0;
                 corners = { Corner::topleft, Corner::topright, Corner::bottomleft, Corner::bottomright };
             }
-            if (!unmovableWindows.count(wc.first))
+            if (!unmovableWindows.contains(wc.first))
             {
                 Corner corner; 
                 if (freeCorners.size())
@@ -402,8 +403,6 @@ void processAllWindows(bool force)
 
     map<HWND, Rect> windowRects;
     EnumWindows(enumWindowsProc, reinterpret_cast<LPARAM>(&windowRects));
-    // int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-    // int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
     // unmaximize windows to get rid of related issues
     for (auto const& [w, r] : windowRects)
@@ -428,7 +427,7 @@ void processAllWindows(bool force)
     set<HWND> newWindows;
 
     for(auto &[w, r]: oldWindowMonitor)
-        if(!windowMonitor.count(w)) 
+        if(!windowMonitor.contains(w)) 
             changed = true;
         else if(get<HMONITOR>(windowMonitor.at(w)) != get<HMONITOR>(r))
         {
@@ -437,13 +436,13 @@ void processAllWindows(bool force)
         }
 
     set<HWND> deletedUnmovableWindows;
-    for (auto& w : unmovableWindows) if(!windowMonitor.count(w)) deletedUnmovableWindows.insert(w);
+    for (auto& w : unmovableWindows) if(!windowMonitor.contains(w)) deletedUnmovableWindows.insert(w);
     for (auto& w : deletedUnmovableWindows) unmovableWindows.erase(w);
     deletedUnmovableWindows.clear();
 
     for(auto &[w, r]: windowMonitor)
     {
-        if (!oldWindowMonitor.count(w))
+        if (!oldWindowMonitor.contains(w))
         {
             changed = true;
             newWindows.insert(w);
@@ -480,7 +479,7 @@ void processAllWindows(bool force)
 
     adjustWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
     // save window sizes after adjustment for size change detection to remain stable
-    for (auto& [w, mcr] : oldWindowMonitor) if (windowRects.count(w)) get<Rect>(mcr) = windowRects[w];
+    for (auto& [w, mcr] : oldWindowMonitor) if (windowRects.contains(w)) get<Rect>(mcr) = windowRects[w];
 }
 
 bool toggleMinimizeAllWindows()
@@ -582,7 +581,7 @@ readRegistryValue<wstring, REG_SZ>(basic_string_view<TCHAR> key, basic_string_vi
         {
             auto data = make_unique<BYTE[]>(dataSize);
             if (RegQueryValueEx(hKey, name.data(), nullptr, &dataType, data.get(), &dataSize) == ERROR_SUCCESS)
-                result = reinterpret_cast<wchar_t*>(data.get());
+                result = bit_cast<wchar_t*>(data.get());
         }
         RegCloseKey(hKey);
     }
