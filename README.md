@@ -19,12 +19,6 @@ and single click toggles bulk minimization
 - Double click displays a settings window
 ## Prerequisities
 - Windows 11 (may work on 10 but was not tested)
-- QtCreator for Qt6 or Visual Studio (2022) for WTL implementation
+- Visual Studio (2022) for WTL implementation or QtCreator for Qt6
 ## TODO
-- maybe add an option to skip the topright corner, so that 
-windows can be raised with clicking
-- test on a big screen and maybe implement conditional middle-side
-placement of smallest windows
-- finish implementing corner preservation so that windows do not
-make meaningless moves
 - support vertical screens (different order of corners)
