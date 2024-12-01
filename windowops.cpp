@@ -93,7 +93,6 @@ map<HMONITOR, string> monitorNames;
 map<HWND, pair<string, string>> windowTitles;
 map<HWND, tuple<HMONITOR, Corner, Rect>> oldWindowMonitor; /// previous windows placement for tracking changes
 set<HWND> unmovableWindows;
-double sf0 = 0;
 
 // WINDOWS UTILITY FUNCTIONS
 
@@ -189,7 +188,7 @@ static void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner, int>, 
     }
 }
 
-static bool loadThemeData(const HWND& w, int& unitSize, double sf, int& borderHeight, int& borderWidth)
+static bool loadThemeData(const HWND& w, int& unitSize, double sf0, double sf, int& borderHeight, int& borderWidth)
 {
     if (HTHEME theme = OpenThemeData(w, L"WINDOW"))
     {
@@ -290,6 +289,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
 {
     UINT dpiX;
     UINT dpiY;
+    static double sf0 = 0;
     if (sf0 == 0)
     {
         HMONITOR primaryMonitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTOPRIMARY);
@@ -306,7 +306,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
         int borderHeight = 0;
         auto &mrect = monitorRects.at(mon);
         for (auto &[_, windows] : mcvw)
-            if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), unitSize, sf, borderHeight, borderWidth)) 
+            if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), unitSize, sf0, sf, borderHeight, borderWidth)) 
                 break;
         for(int i = 0; i < 4; i++)
             adjustWindowsInCorner(Corner(i), mcvw, unitSize, windowRects, mrect, { borderWidth, borderHeight }, mon);
