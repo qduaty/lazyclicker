@@ -219,10 +219,11 @@ static void adjustWindowsInCorner(const flags<Corner, int>& corner,
         long dx0 = long(mcvw.at(otherCorner).size()) * unitSize;
         // 2°
         otherCorner = corner ^ int(Corner::bottom);
-        long dy = long(mcvw.at(otherCorner).size()) * unitSize;
+        long n = max(0, long(mcvw.at(otherCorner).size()) - i);
+        long dy = n * unitSize;
         // 3°
         otherCorner = corner ^ int(Corner::bottomright);
-        long dx = max(dx0, long(mcvw.at(otherCorner).size()) * unitSize);
+        long dx1 = max(dx0, long(mcvw.at(otherCorner).size()) * unitSize);
         long maxIncreaseX = windowops_maxIncrease;
         long maxIncreaseY = maxIncreaseX;
         bool result = false;
@@ -249,17 +250,17 @@ static void adjustWindowsInCorner(const flags<Corner, int>& corner,
         if (corner & Corner::right)
         {
             newRect.right = mrect.right + borderWidth - i * unitSize;
-            newRect.left = max(wrect.left + newRect.right - wrect.right, mrect.left + dx - borderWidth);
+            newRect.left = max(wrect.left + newRect.right - wrect.right, mrect.left + dx1 - borderWidth);
         }
         else
         {
             newRect.left = mrect.left - borderWidth + i * unitSize;
-            newRect.right = min(wrect.right + newRect.left - wrect.left, mrect.right - dx + borderWidth);
+            newRect.right = min(wrect.right + newRect.left - wrect.left, mrect.right - dx1 + borderWidth);
         }
         if (corner & Corner::bottom)
         {
             newRect.bottom = mrect.bottom + borderWidth - (long(windows.size()) - i - 1) * unitSize;
-            newRect.top = max(wrect.top + newRect.bottom - wrect.bottom, mrect.top + dy - borderWidth);
+            newRect.top = max(wrect.top + newRect.bottom - wrect.bottom, mrect.top + dy - borderHeight);
         }
         else
         {
@@ -267,12 +268,17 @@ static void adjustWindowsInCorner(const flags<Corner, int>& corner,
             newRect.bottom = min(wrect.bottom + newRect.top - wrect.top, mrect.bottom - dy + borderHeight);
         }
         wrect = newRect;
-        array<const char*, 4> cornerNames{ "Corner::topleft", "Corner::topright", "Corner::bottomleft", "Corner::bottomright" };
-        cout << "Moving window " << w << '(' << monitorNames[mon] << '@';
-        cout << cornerNames[int(corner)] << ':' << i << ')' << " to relative: " << wrect.left - mrect.left << ':';
-        cout << wrect.top - mrect.top << ':' << wrect.right - mrect.right << ':' << wrect.bottom - mrect.bottom << '[';
         result = MoveWindow(w, wrect.left, wrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
-        if (!result)
+        if (result)
+        {
+            array<const char*, 4> cornerNames{ "Corner::topleft", "Corner::topright", "Corner::bottomleft", "Corner::bottomright" };
+            cout << "Moved window " << w << '(' << monitorNames[mon] << '@';
+            cout << cornerNames[int(corner)] << ':' << i << ')';
+            cout << "; dx=" << dx1 / unitSize << ", dy=" << dy / unitSize;
+            cout << "; relative: " << wrect.left - mrect.left << ':';
+            cout << wrect.top - mrect.top << ':' << wrect.right - mrect.right << ':' << wrect.bottom - mrect.bottom << '[';
+        }
+        else
         {
             unmovableWindows.insert(w);
             oldWindowMonitor.erase(w);
