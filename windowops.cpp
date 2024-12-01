@@ -92,7 +92,6 @@ struct Rect : public RECT
 map<HMONITOR, string> monitorNames;
 map<HWND, pair<string, string>> windowTitles;
 map<HWND, tuple<HMONITOR, Corner, Rect>> oldWindowMonitor; /// previous windows placement for tracking changes
-vector<HWND> bulkMinimizedWindows;
 set<HWND> unmovableWindows;
 double sf0 = 0;
 
@@ -167,10 +166,9 @@ static BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
     return TRUE;
 }
 
-static BOOL CALLBACK enumMonitorsProc(HMONITOR monitor, HDC /*dc*/, LPRECT pRect, LPARAM lParam)
+static BOOL CALLBACK enumMonitorsProc(HMONITOR monitor, HDC__ const */*dc*/, RECT const *pRect, map<HMONITOR, RECT>* monitorRects)
 {
-    auto &monitorRects = *bit_cast<map<HMONITOR, RECT>*>(lParam);
-    monitorRects[monitor] = *pRect;
+    (*monitorRects)[monitor] = *pRect;
     return TRUE;
 }
 
@@ -205,9 +203,12 @@ static bool loadThemeData(const HWND& w, int& unitSize, double sf, int& borderHe
 }
 
 static void adjustWindowsInCorner(const flags<Corner, int>& corner,
-                            const std::map<flags<Corner, int>, std::multimap<size_t, HWND>>& mcvw, 
-                            int unitSize, std::map<HWND, Rect>& windowRects, 
-                            const Rect& mrect, SIZE borderSize, const HMONITOR& mon)
+                                  const std::map<flags<Corner, int>, std::multimap<size_t, HWND>>& mcvw, 
+                                  int unitSize, 
+                                  std::map<HWND, Rect>& windowRects, 
+                                  const Rect& mrect, 
+                                  SIZE borderSize, 
+                                  const HMONITOR& mon)
 {
     int i = 0;
     const auto& windows = mcvw.at(corner);
@@ -284,8 +285,8 @@ static void adjustWindowsInCorner(const flags<Corner, int>& corner,
 }
 
 static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, multimap<size_t, HWND>>>& windowsOrderInCorners,
-    const map<HMONITOR, Rect>& monitorRects,
-    map<HWND, Rect>& windowRects)
+                                          const map<HMONITOR, Rect>& monitorRects,
+                                          map<HWND, Rect>& windowRects)
 {
     UINT dpiX;
     UINT dpiY;
@@ -432,7 +433,7 @@ void processAllWindows(bool force)
 {
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
     map<HMONITOR, Rect> monitorRects;
-    EnumDisplayMonitors(nullptr, nullptr, enumMonitorsProc, reinterpret_cast<LPARAM>(&monitorRects));
+    EnumDisplayMonitors(nullptr, nullptr, MONITORENUMPROC(enumMonitorsProc), reinterpret_cast<LPARAM>(&monitorRects));
     for(auto &[m, r]: monitorRects)
     {
         MONITORINFOEXA info {sizeof(MONITORINFOEXA)};
@@ -499,7 +500,6 @@ void processAllWindows(bool force)
     // TODO there is a reference to oldWindowMonitor in adjustWindowsInMonitorCorners, try to move 
     // this line after and check if windows are resized correctly, otherwise remove that reference
     oldWindowMonitor = windowMonitor; 
-
     adjustWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
     // save window sizes after adjustment for size change detection to remain stable
     for (auto& [w, mcr] : oldWindowMonitor) if (windowRects.contains(w)) get<Rect>(mcr) = windowRects[w];
@@ -507,6 +507,8 @@ void processAllWindows(bool force)
 
 bool toggleMinimizeAllWindows()
 {
+    static vector<HWND> bulkMinimizedWindows;
+
     if (bulkMinimizedWindows.size())
     {
         for (auto& w : bulkMinimizedWindows)
@@ -619,19 +621,13 @@ writeRegistryValue<wstring, REG_SZ>(basic_string_view<TCHAR> key, basic_string_v
     if (RegCreateKeyEx(HKEY_CURRENT_USER, key.data(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS)
     {
         if (RegSetValueEx(hKey, name.data(), 0, REG_SZ, (const BYTE*)v.data(), DWORD(sizeof(wchar_t) * v.size())) == ERROR_SUCCESS)
-        {
             result = true;
-        }
-        else
-        {
+        else 
             cerr << "Failed to set value" << endl;
-        }
         RegCloseKey(hKey);
     }
-    else
-    {
+    else 
         cerr << "Failed to create/open key" << endl;
-    }
 
     return result;
 }
