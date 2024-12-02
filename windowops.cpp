@@ -272,7 +272,7 @@ static void adjustWindowsInCorner(const flags<Corner, int>& corner,
         if (result)
         {
             array<const char*, 4> cornerNames{ "Corner::topleft", "Corner::topright", "Corner::bottomleft", "Corner::bottomright" };
-            cout << "Moved window " << w << '(' << monitorNames[mon] << '@';
+            cout << "Moved window " << w << " [" << windowTitles[w].first << "] " << '(' << monitorNames[mon] << '@';
             cout << cornerNames[int(corner)] << ':' << i << ')';
             cout << "; dx=" << dx1 / unitSize << ", dy=" << dy / unitSize;
             cout << "; relative: " << wrect.left - mrect.left << ':';

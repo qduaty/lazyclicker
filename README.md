@@ -20,7 +20,3 @@ and single click toggles bulk minimization
 ## Prerequisities
 - Windows 11 (may work on 10 but was not tested)
 - Visual Studio (2022) for WTL implementation or QtCreator for Qt6
-## TODO
-- support vertical screens (different order of corners)
-- consider supporting window selection with clicking, which
-disables the top-right corner
