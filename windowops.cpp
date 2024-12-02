@@ -25,8 +25,11 @@ template<typename E, typename I>struct flags {
     auto operator=(E x) { v = I(x); return *this; }
     auto operator=(I x) { v = x; return *this; }
     operator I() const { return v; }
+    explicit operator E() const { return E(v); }
     static friend I operator&(flags f, E x) { return f.v & I(x); }
+    static friend I operator^(flags f, E x) { return f.v ^ I(x); }
     static friend bool operator==(flags f, E x) { return f.v == I(x); }
+    flags& operator|=(E x) { v |= I(x); return *this; }
 };
 
 enum class Corner : int { top = 0, left = 0, topleft = top | left, right = 1, topright = top | right,
@@ -110,7 +113,6 @@ static string GetProcessNameFromHWND(HWND hwnd)
     }
     return "";
 }
-
 
 // https://stackoverflow.com/questions/7277366/why-does-enumwindows-return-more-windows-than-i-expected
 static BOOL IsAltTabWindow(HWND hwnd)
@@ -215,14 +217,14 @@ static void adjustWindowsInCorner(const flags<Corner, int>& corner,
     {
         flags<Corner, int> otherCorner;
         // 1°
-        otherCorner = corner ^ int(Corner::right);
+        otherCorner = corner ^ Corner::right;
         long dx0 = long(mcvw.at(otherCorner).size()) * unitSize;
         // 2°
-        otherCorner = corner ^ int(Corner::bottom);
+        otherCorner = corner ^ Corner::bottom;
         long n = max(0, long(mcvw.at(otherCorner).size()) - i);
         long dy = n * unitSize;
         // 3°
-        otherCorner = corner ^ int(Corner::bottomright);
+        otherCorner = corner ^ Corner::bottomright;
         long dx1 = max(dx0, long(mcvw.at(otherCorner).size()) * unitSize);
         long maxIncreaseX = windowops_maxIncrease;
         long maxIncreaseY = maxIncreaseX;
@@ -492,7 +494,17 @@ void processAllWindows(bool force)
         if (!oldWindowMonitor.contains(w))
         {
             changed = true;
-            newWindows.insert(w);
+            auto mrect = monitorRects[get<HMONITOR>(r)];
+            if (GetWindowLong(w, GWL_STYLE) & WS_MAXIMIZEBOX == 0)
+            {
+                POINT cursorPos;
+                GetCursorPos(&cursorPos);
+                flags<Corner, int> c = Corner::topleft;
+                if (abs(cursorPos.x - mrect.right) < abs(cursorPos.x - mrect.left)) c |= Corner::right;
+                if (abs(cursorPos.y - mrect.bottom) < abs(cursorPos.y - mrect.top)) c |= Corner::bottom;
+                get<Corner>(r) = Corner(c);
+            }
+            else newWindows.insert(w);
         }
         else if (get<Rect>(oldWindowMonitor[w]) != get<Rect>(windowMonitor[w]))
             changed = true;
