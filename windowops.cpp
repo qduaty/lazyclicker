@@ -425,7 +425,8 @@ static void displayMonitorsAndWindows(std::map<HMONITOR, Rect>& monitorRects, st
     for (auto const& [m, s] : monitorNames)
     {
         auto const& rect = monitorRects[m];
-        cout << monitorNames[m] << ": " << rect.left << ':' << rect.top << ':' << rect.right << ':' << rect.bottom << endl;
+        cout << monitorNames[m] << ": " << rect.left << ':' << rect.top << ':' << rect.right << ':' << rect.bottom;
+        cout << '(' << rect.right - rect.left << 'x' << rect.bottom - rect.top << ')' << endl;
     }
 
     cout << "Windows:\n";
