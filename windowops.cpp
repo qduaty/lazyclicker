@@ -190,13 +190,13 @@ static void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner, int>, 
     }
 }
 
-static bool loadThemeData(const HWND& w, int& unitSize, double sf0, double sf, int& borderHeight, int& borderWidth)
+static bool loadThemeData(const HWND& w, int& unitSize, double sf0, double sf, int& borderWidth, int& borderHeight)
 {
     if (HTHEME theme = OpenThemeData(w, L"WINDOW"))
     {
         unitSize = int((GetThemeSysSize(theme, SM_CYSIZE) + GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 2) * sf / sf0);
-        borderHeight = GetThemeSysSize(theme, SM_CXPADDEDBORDER);
-        borderWidth = int(borderHeight * sf / 100);
+        borderWidth = GetThemeSysSize(theme, SM_CXPADDEDBORDER) * sf / 100;
+        borderHeight = int(borderWidth * 100 / sf);
         CloseThemeData(theme);
         return true;
     }
@@ -314,7 +314,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
         int borderHeight = 0;
         auto &mrect = monitorRects.at(mon);
         for (auto &[_, windows] : mcvw)
-            if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), unitSize, sf0, sf, borderHeight, borderWidth)) 
+            if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), unitSize, sf0, sf, borderWidth, borderHeight))
                 break;
         for(int i = 0; i < 4; i++)
             adjustWindowsInCorner(Corner(i), mcvw, unitSize, windowRects, mrect, { borderWidth, borderHeight }, mon);
