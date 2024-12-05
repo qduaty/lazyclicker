@@ -316,6 +316,10 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
         for (auto &[_, windows] : mcvw)
             if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), unitSize, sf0, sf, borderWidth, borderHeight))
                 break;
+        
+        // workaround to prevent some windows from leaking into another monitor with different hidpi scaling. TODO replace with a proper solution
+        if (windowsOrderInCorners.size() > 1) borderWidth = borderHeight = 0;
+
         for(int i = 0; i < 4; i++)
             adjustWindowsInCorner(Corner(i), mcvw, unitSize, windowRects, mrect, { borderWidth, borderHeight }, mon);
     }
