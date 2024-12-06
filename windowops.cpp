@@ -114,6 +114,21 @@ static string GetProcessNameFromHWND(HWND hwnd)
     return "";
 }
 
+static PROCESS_DPI_AWARENESS GetProcessDpiAwarenessFromHWND(HWND hwnd)
+{
+    DWORD processId;
+    GetWindowThreadProcessId(hwnd, &processId);
+    PROCESS_DPI_AWARENESS awareness = PROCESS_DPI_UNAWARE;
+
+    if (HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId); hProcess)
+    {
+        GetProcessDpiAwareness(hProcess, &awareness);
+        CloseHandle(hProcess);
+    }
+    return awareness;
+}
+
+
 // https://stackoverflow.com/questions/7277366/why-does-enumwindows-return-more-windows-than-i-expected
 static BOOL IsAltTabWindow(HWND hwnd)
 {
@@ -205,16 +220,19 @@ static bool loadThemeData(const HWND& w, int& unitSize, double sf0, double sf, i
 
 static void adjustWindowsInCorner(const flags<Corner, int>& corner,
                                   const std::map<flags<Corner, int>, std::multimap<size_t, HWND>>& mcvw, 
-                                  int unitSize, 
+                                  int unitSize,
                                   std::map<HWND, Rect>& windowRects, 
                                   const Rect& mrect, 
                                   SIZE borderSize, 
-                                  const HMONITOR& mon)
+                                  const HMONITOR& mon,
+                                  bool multiMonitor)
 {
     int i = 0;
     const auto& windows = mcvw.at(corner);
     for (auto& [s, w] : windows)
     {
+        if (multiMonitor && GetProcessDpiAwarenessFromHWND(w) != PROCESS_PER_MONITOR_DPI_AWARE) borderSize = { 0, 0 };
+
         flags<Corner, int> otherCorner;
         // 1°
         otherCorner = corner ^ Corner::right;
@@ -317,11 +335,9 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
             if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), unitSize, sf0, sf, borderWidth, borderHeight))
                 break;
         
-        // workaround to prevent some windows from leaking into another monitor with different hidpi scaling. TODO replace with a proper solution
-        if (windowsOrderInCorners.size() > 1) borderWidth = borderHeight = 0;
-
+        bool multiMonitor = windowsOrderInCorners.size() > 1;
         for(int i = 0; i < 4; i++)
-            adjustWindowsInCorner(Corner(i), mcvw, unitSize, windowRects, mrect, { borderWidth, borderHeight }, mon);
+            adjustWindowsInCorner(Corner(i), mcvw, unitSize, windowRects, mrect, { borderWidth, borderHeight }, mon, multiMonitor);
     }
 }
 
@@ -471,7 +487,7 @@ void processAllWindows(bool force)
     for (auto &[w, r] : windowRects)
     {
         auto [m, c] = findMainMonitorAndCorner(r, monitorRects);
-        // if(!monitor) monitor = monitorRects.rbegin()->first; // that would steal space for invisible windows, consider filtering them better because some fall into this category incorrectly
+        // if(!monitor) monitor = monitorRects.rbegin()->first; // TODO that would steal space for invisible windows, consider filtering them better because some fall into this category incorrectly
         if(m) windowMonitor[w] = {m, c, r};
         // else
         //     cout << "No monitor for window " << w << endl;
