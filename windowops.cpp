@@ -210,7 +210,7 @@ static bool loadThemeData(const HWND& w, int& unitSize, double sf0, double sf, i
     if (HTHEME theme = OpenThemeData(w, L"WINDOW"))
     {
         unitSize = int((GetThemeSysSize(theme, SM_CYSIZE) + GetThemeSysSize(theme, SM_CXPADDEDBORDER) * 2) * sf / sf0);
-        borderWidth = GetThemeSysSize(theme, SM_CXPADDEDBORDER) * sf / 100;
+        borderWidth = int(GetThemeSysSize(theme, SM_CXPADDEDBORDER) * sf / 100);
         borderHeight = int(borderWidth * 100 / sf);
         CloseThemeData(theme);
         return true;
@@ -218,15 +218,14 @@ static bool loadThemeData(const HWND& w, int& unitSize, double sf0, double sf, i
     return false;
 }
 
-static void adjustWindowsInCorner(const flags<Corner, int>& corner,
-                                  const std::map<flags<Corner, int>, std::multimap<size_t, HWND>>& mcvw, 
-                                  int unitSize,
-                                  std::map<HWND, Rect>& windowRects, 
-                                  const Rect& mrect, 
-                                  SIZE borderSize, 
+static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects, 
+                                  const flags<Corner, int>& corner,
+                                  const Rect& mrect,
                                   const HMONITOR& mon,
-                                  bool multiMonitor)
+                                  const std::map<flags<Corner, int>, std::multimap<size_t, HWND>>& mcvw, 
+                                  tuple<int /*unitSize*/, SIZE /*borderSize*/, bool /*multiMonitor*/> settings)
 {
+    auto& [unitSize, borderSize, multiMonitor] = settings;
     int i = 0;
     const auto& windows = mcvw.at(corner);
     for (auto& [s, w] : windows)
@@ -337,7 +336,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
         
         bool multiMonitor = windowsOrderInCorners.size() > 1;
         for(int i = 0; i < 4; i++)
-            adjustWindowsInCorner(Corner(i), mcvw, unitSize, windowRects, mrect, { borderWidth, borderHeight }, mon, multiMonitor);
+            adjustWindowsInCorner(windowRects, Corner(i), mrect, mon, mcvw, { unitSize, { borderWidth, borderHeight }, multiMonitor });
     }
 }
 
@@ -458,6 +457,48 @@ static void displayMonitorsAndWindows(std::map<HMONITOR, Rect>& monitorRects, st
     }
 }
 
+static bool detectChangedWindows(std::map<HWND, std::tuple<HMONITOR, Corner, Rect>>& windowMonitor, 
+                                 std::set<HWND>& newWindows, 
+                                 const std::map<HMONITOR, Rect>& monitorRects)
+{
+    bool changed = false;
+    for (auto& [w, r] : oldWindowMonitor)
+        if (!windowMonitor.contains(w))
+            changed = true;
+        else if (get<HMONITOR>(windowMonitor.at(w)) != get<HMONITOR>(r))
+        {
+            changed = true;
+            newWindows.insert(w);
+        }
+
+    set<HWND> deletedUnmovableWindows;
+    for (auto& w : unmovableWindows) if (!windowMonitor.contains(w)) deletedUnmovableWindows.insert(w);
+    for (auto& w : deletedUnmovableWindows) unmovableWindows.erase(w);
+    deletedUnmovableWindows.clear();
+
+    for (auto& [w, r] : windowMonitor)
+    {
+        if (!oldWindowMonitor.contains(w))
+        {
+            changed = true;
+            auto mrect = monitorRects.at(get<HMONITOR>(r));
+            if ((GetWindowLong(w, GWL_STYLE) & WS_MAXIMIZEBOX) == 0)
+            {
+                POINT cursorPos;
+                GetCursorPos(&cursorPos);
+                flags<Corner, int> c = Corner::topleft;
+                if (abs(cursorPos.x - mrect.right) < abs(cursorPos.x - mrect.left)) c |= Corner::right;
+                if (abs(cursorPos.y - mrect.bottom) < abs(cursorPos.y - mrect.top)) c |= Corner::bottom;
+                get<Corner>(r) = Corner(c);
+            }
+            else newWindows.insert(w);
+        }
+        else if (get<Rect>(oldWindowMonitor[w]) != get<Rect>(windowMonitor[w]))
+            changed = true;
+    }
+    return changed;
+}
+
 void processAllWindows(bool force)
 {
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
@@ -493,44 +534,8 @@ void processAllWindows(bool force)
         //     cout << "No monitor for window " << w << endl;
     }
 
-    bool changed = false;
     set<HWND> newWindows;
-
-    for(auto &[w, r]: oldWindowMonitor)
-        if(!windowMonitor.contains(w)) 
-            changed = true;
-        else if(get<HMONITOR>(windowMonitor.at(w)) != get<HMONITOR>(r))
-        {
-            changed = true;
-            newWindows.insert(w);
-        }
-
-    set<HWND> deletedUnmovableWindows;
-    for (auto& w : unmovableWindows) if(!windowMonitor.contains(w)) deletedUnmovableWindows.insert(w);
-    for (auto& w : deletedUnmovableWindows) unmovableWindows.erase(w);
-    deletedUnmovableWindows.clear();
-
-    for(auto &[w, r]: windowMonitor)
-    {
-        if (!oldWindowMonitor.contains(w))
-        {
-            changed = true;
-            auto mrect = monitorRects[get<HMONITOR>(r)];
-            if (GetWindowLong(w, GWL_STYLE) & WS_MAXIMIZEBOX == 0)
-            {
-                POINT cursorPos;
-                GetCursorPos(&cursorPos);
-                flags<Corner, int> c = Corner::topleft;
-                if (abs(cursorPos.x - mrect.right) < abs(cursorPos.x - mrect.left)) c |= Corner::right;
-                if (abs(cursorPos.y - mrect.bottom) < abs(cursorPos.y - mrect.top)) c |= Corner::bottom;
-                get<Corner>(r) = Corner(c);
-            }
-            else newWindows.insert(w);
-        }
-        else if (get<Rect>(oldWindowMonitor[w]) != get<Rect>(windowMonitor[w]))
-            changed = true;
-    }
-
+    bool changed = detectChangedWindows(windowMonitor, newWindows, monitorRects);
     if(!force && !changed) return;
 
     displayMonitorsAndWindows(monitorRects, windowRects);
