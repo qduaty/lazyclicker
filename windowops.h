@@ -58,9 +58,9 @@ writeRegistryValue(std::basic_string_view<TCHAR> key, std::basic_string_view<TCH
 }
 
 template<> std::optional<std::wstring>
-readRegistryValue<std::wstring, REG_SZ>(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name);
+readRegistryValue<std::basic_string<TCHAR>, REG_SZ>(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name);
 template<>bool
-writeRegistryValue<std::wstring, REG_SZ>(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name, const std::wstring& v);
+writeRegistryValue<std::basic_string_view<TCHAR>, REG_SZ>(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name, const std::basic_string_view<TCHAR>& v);
 bool deleteRegistryValue(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name);
 bool deleteRegistrySubkey(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name);
 /// <summary>

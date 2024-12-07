@@ -27,7 +27,7 @@ public:
         MSG_WM_HSCROLL(OnHScroll)
     END_MSG_MAP()
 
-    LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+    LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL const& /*bHandled*/)
     {
         // Initialize controls here
         m_slider.Attach(GetDlgItem(IDC_SLIDER_ALLOWED_INCREASE));
@@ -38,7 +38,7 @@ public:
         return TRUE;
     }
 
-    LRESULT OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+    LRESULT OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND__ const */*hWndCtl*/, BOOL const& /*bHandled*/)
     {
         m_slider.Detach();
         EndDialog(wID);
@@ -158,7 +158,7 @@ public:
         return 0;
     }
 
-    LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+    LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL const& /*bHandled*/)
     {
         NOTIFYICONDATA nid = { 0 };
         nid.cbSize = sizeof(NOTIFYICONDATA);
@@ -207,7 +207,7 @@ private:
     };
 };
 
-int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpCmdLine, int nCmdShow)
+static int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpCmdLine, int nCmdShow)
 {
     if (lpCmdLine == wstring_view(L"--console")) CreateConsole();
     _Module.Init(nullptr, hInstance);

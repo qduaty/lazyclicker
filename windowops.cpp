@@ -625,11 +625,11 @@ bool CreateConsole()
     return result;
 }
 
-template<> optional<wstring>
-readRegistryValue<wstring, REG_SZ>(basic_string_view<TCHAR> key, basic_string_view<TCHAR> name)
+template<> optional<basic_string<TCHAR>>
+readRegistryValue<basic_string<TCHAR>, REG_SZ>(basic_string_view<TCHAR> key, basic_string_view<TCHAR> name)
 {
     HKEY hKey;
-    optional<wstring> result;
+    optional<basic_string<TCHAR>> result;
     if (RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_READ, &hKey) == ERROR_SUCCESS)
     {
         DWORD dataType;
@@ -637,7 +637,7 @@ readRegistryValue<wstring, REG_SZ>(basic_string_view<TCHAR> key, basic_string_vi
         {
             auto data = make_unique<BYTE[]>(dataSize);
             if (RegQueryValueEx(hKey, name.data(), nullptr, &dataType, data.get(), &dataSize) == ERROR_SUCCESS)
-                result = bit_cast<wchar_t*>(data.get());
+                result = bit_cast<TCHAR*>(data.get());
         }
         RegCloseKey(hKey);
     }
@@ -645,13 +645,13 @@ readRegistryValue<wstring, REG_SZ>(basic_string_view<TCHAR> key, basic_string_vi
 }
 
 template<>bool
-writeRegistryValue<wstring, REG_SZ>(basic_string_view<TCHAR> key, basic_string_view<TCHAR> name, const wstring& v)
+writeRegistryValue<basic_string_view<TCHAR>, REG_SZ>(basic_string_view<TCHAR> key, basic_string_view<TCHAR> name, const basic_string_view<TCHAR>& v)
 {
     HKEY hKey;
     bool result = false;
     if (RegCreateKeyEx(HKEY_CURRENT_USER, key.data(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS)
     {
-        if (RegSetValueEx(hKey, name.data(), 0, REG_SZ, (const BYTE*)v.data(), DWORD(sizeof(wchar_t) * v.size())) == ERROR_SUCCESS)
+        if (RegSetValueEx(hKey, name.data(), 0, REG_SZ, bit_cast<const BYTE*>(v.data()), DWORD(sizeof(TCHAR) * v.size())) == ERROR_SUCCESS)
             result = true;
         else 
             cerr << "Failed to set value" << endl;
