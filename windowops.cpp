@@ -217,7 +217,7 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
     {
         if (auto dpiAwareness = GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(w));
             multiMonitor && dpiAwareness != DPI_AWARENESS_PER_MONITOR_AWARE)
-            borderSize = { 0, 0 };
+            borderSize = { 0, 0 }; // unaware windows may be resized in context of a different screen
 
         flags<Corner, int> otherCorner;
         // 1°
@@ -486,7 +486,7 @@ static bool detectChangedWindows(std::map<HWND, std::tuple<HMONITOR, Corner, Rec
     return changed;
 }
 
-void processAllWindows(bool force)
+void arrangeAllWindows(bool force)
 {
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
     map<HMONITOR, Rect> monitorRects;
@@ -563,57 +563,42 @@ bool toggleMinimizeAllWindows()
 
 bool deleteRegistryValue(basic_string_view<TCHAR> key, basic_string_view<TCHAR> name)
 {
-    HKEY hKey;
     bool result = false;
-    if (RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_SET_VALUE, &hKey) == ERROR_SUCCESS)
+    if (HKEY hKey; ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_SET_VALUE, &hKey))
     {
-        if (RegDeleteValue(hKey, name.data()) == ERROR_SUCCESS)
+        if (ERROR_SUCCESS == RegDeleteValue(hKey, name.data()))
         {
             wcout << L"Value deleted successfully" << endl;
             result = true;
         }
-        else
-        {
-            cerr << "Failed to delete value" << endl;
-        }
+        else cerr << "Failed to delete value" << endl;
         RegCloseKey(hKey);
     }
-    else
-    {
-        cerr << "Failed to open key" << endl;
-    }
-
+    else cerr << "Failed to open key" << endl;
     return result;
 }
 
 bool deleteRegistrySubkey(basic_string_view<TCHAR> key, basic_string_view<TCHAR> name)
 {
-    HKEY hKey;
     bool result = false;
-    if (RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_WRITE, &hKey) == ERROR_SUCCESS)
+    if (HKEY hKey; ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_WRITE, &hKey))
     {
-        if (RegDeleteKey(hKey, name.data()) == ERROR_SUCCESS)
+        if (ERROR_SUCCESS == RegDeleteKey(hKey, name.data()))
         {
             wcout << L"Registry key deleted successfully" << endl;
             result = true;
         }
-        else
-        {
-            cerr << "Failed to delete registry key" << endl;
-        }
+        else cerr << "Failed to delete registry key" << endl;
         RegCloseKey(hKey);
     }
-    else
-    {
-        cerr << "Failed to open key" << endl;
-    }
+    else cerr << "Failed to open key" << endl;
     return result;
 }
 
 bool CreateConsole()
 {
     bool result = AllocConsole();
-    if (result) 
+    if (result)
     {
         FILE* fp;
         freopen_s(&fp, "CONOUT$", "w", stdout);
@@ -628,17 +613,14 @@ bool CreateConsole()
 template<> optional<basic_string<TCHAR>>
 readRegistryValue<basic_string<TCHAR>, REG_SZ>(basic_string_view<TCHAR> key, basic_string_view<TCHAR> name)
 {
-    HKEY hKey;
     optional<basic_string<TCHAR>> result;
-    if (RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+    if (HKEY hKey; ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_READ, &hKey))
     {
         DWORD dataType;
-        if (DWORD dataSize; RegQueryValueEx(hKey, name.data(), nullptr, &dataType, nullptr, &dataSize) == ERROR_SUCCESS && dataType == REG_SZ)
-        {
-            auto data = make_unique<BYTE[]>(dataSize);
-            if (RegQueryValueEx(hKey, name.data(), nullptr, &dataType, data.get(), &dataSize) == ERROR_SUCCESS)
+        if (DWORD dataSize; ERROR_SUCCESS == RegQueryValueEx(hKey, name.data(), nullptr, &dataType, nullptr, &dataSize) && dataType == REG_SZ)
+            if (auto data = make_unique<BYTE[]>(dataSize); 
+                ERROR_SUCCESS == RegQueryValueEx(hKey, name.data(), nullptr, &dataType, data.get(), &dataSize))
                 result = bit_cast<TCHAR*>(data.get());
-        }
         RegCloseKey(hKey);
     }
     return result;
@@ -647,19 +629,15 @@ readRegistryValue<basic_string<TCHAR>, REG_SZ>(basic_string_view<TCHAR> key, bas
 template<>bool
 writeRegistryValue<basic_string_view<TCHAR>, REG_SZ>(basic_string_view<TCHAR> key, basic_string_view<TCHAR> name, const basic_string_view<TCHAR>& v)
 {
-    HKEY hKey;
     bool result = false;
-    if (RegCreateKeyEx(HKEY_CURRENT_USER, key.data(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS)
+    if (HKEY hKey; ERROR_SUCCESS == RegCreateKeyEx(HKEY_CURRENT_USER, key.data(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr))
     {
-        if (RegSetValueEx(hKey, name.data(), 0, REG_SZ, bit_cast<const BYTE*>(v.data()), DWORD(sizeof(TCHAR) * v.size())) == ERROR_SUCCESS)
+        if (ERROR_SUCCESS == RegSetValueEx(hKey, name.data(), 0, REG_SZ, bit_cast<const BYTE*>(v.data()), DWORD(sizeof(TCHAR) * v.size())))
             result = true;
-        else 
-            cerr << "Failed to set value" << endl;
+        else cerr << "Failed to set value" << endl;
         RegCloseKey(hKey);
     }
-    else 
-        cerr << "Failed to create/open key" << endl;
+    else cerr << "Failed to create/open key" << endl;
 
     return result;
 }
-

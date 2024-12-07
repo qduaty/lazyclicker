@@ -71,7 +71,7 @@ public:
     LRESULT OnTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) const
     {
         if (m_bAutoArrange)
-            processAllWindows();
+            arrangeAllWindows();
         return 0;
     }
 
@@ -79,7 +79,7 @@ public:
     {
         windowops_maxIncrease = static_cast<int>(wParam);
         writeRegistryValue<DWORD, REG_DWORD>(settingsKey, L"allowedIncrease", windowops_maxIncrease);
-        processAllWindows();
+        arrangeAllWindows();
         return 0;
     }
 
@@ -107,7 +107,7 @@ public:
             if (m_bAutoArrange)
                 toggleMinimizeAllWindows();
             else
-                processAllWindows();
+                arrangeAllWindows();
             break;
         case WM_RBUTTONUP:
             {
@@ -149,7 +149,7 @@ public:
             quitAndUnregister();
             break;
         case ID_TRAYMENU_TOGGLE_MINIMIZE_ALL:
-            if(!toggleMinimizeAllWindows()) processAllWindows(true); 
+            if(!toggleMinimizeAllWindows()) arrangeAllWindows(true); 
             break;
         default:
             break;

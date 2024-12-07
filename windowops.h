@@ -7,7 +7,7 @@
 
 extern int windowops_maxIncrease;
 
-void processAllWindows(bool force = false);
+void arrangeAllWindows(bool force = false);
 /// <summary>
 /// </summary>
 /// <returns>windows were minimized</returns>
@@ -16,17 +16,14 @@ bool toggleMinimizeAllWindows();
 template<typename T, int RegType> inline std::optional<T> 
 readRegistryValue(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name)
 {
-    HKEY hKey;
     std::optional<T> result;
-    if (RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+    if (HKEY hKey; ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, key.data(), 0, KEY_READ, &hKey))
     {
         DWORD dataType;
-        if (DWORD dataSize; RegQueryValueEx(hKey, name.data(), nullptr, &dataType, nullptr, &dataSize) == ERROR_SUCCESS && dataType == RegType)
-        {
-            auto data = std::make_unique<BYTE[]>(dataSize);
-            if (RegQueryValueEx(hKey, name.data(), nullptr, &dataType, data.get(), &dataSize) == ERROR_SUCCESS)
+        if (DWORD dataSize; ERROR_SUCCESS == RegQueryValueEx(hKey, name.data(), nullptr, &dataType, nullptr, &dataSize) && dataType == RegType)
+            if (auto data = std::make_unique<BYTE[]>(dataSize); 
+                ERROR_SUCCESS == RegQueryValueEx(hKey, name.data(), nullptr, &dataType, data.get(), &dataSize))
                 result = *std::bit_cast<T*>(data.get());
-        }
         RegCloseKey(hKey);
     }
     return result;
@@ -37,23 +34,13 @@ writeRegistryValue(std::basic_string_view<TCHAR> key, std::basic_string_view<TCH
 {
     HKEY hKey;
     bool result = false;
-    if (RegCreateKeyEx(HKEY_CURRENT_USER, key.data(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS)
+    if (ERROR_SUCCESS == RegCreateKeyEx(HKEY_CURRENT_USER, key.data(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr))
     {
-        if (RegSetValueEx(hKey, name.data(), 0, RegType, (const BYTE*)&v, sizeof(T)) == ERROR_SUCCESS)
-        {
-            result = true;
-        }
-        else
-        {
-            std::cerr << "Failed to set value" << std::endl;
-        }
+        if (ERROR_SUCCESS == RegSetValueEx(hKey, name.data(), 0, RegType, (const BYTE*)&v, sizeof(T))) result = true;
+        else std::cerr << "Failed to set value" << std::endl;
         RegCloseKey(hKey);
     }
-    else
-    {
-        std::cerr << "Failed to create/open key" << std::endl;
-    }
-
+    else std::cerr << "Failed to create/open key" << std::endl;
     return result;
 }
 
