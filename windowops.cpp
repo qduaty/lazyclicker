@@ -114,21 +114,6 @@ static string GetProcessNameFromHWND(HWND hwnd)
     return "";
 }
 
-static PROCESS_DPI_AWARENESS GetProcessDpiAwarenessFromHWND(HWND hwnd)
-{
-    DWORD processId;
-    GetWindowThreadProcessId(hwnd, &processId);
-    PROCESS_DPI_AWARENESS awareness = PROCESS_DPI_UNAWARE;
-
-    if (HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId); hProcess)
-    {
-        GetProcessDpiAwareness(hProcess, &awareness);
-        CloseHandle(hProcess);
-    }
-    return awareness;
-}
-
-
 // https://stackoverflow.com/questions/7277366/why-does-enumwindows-return-more-windows-than-i-expected
 static BOOL IsAltTabWindow(HWND hwnd)
 {
@@ -230,7 +215,9 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
     const auto& windows = mcvw.at(corner);
     for (auto& [s, w] : windows)
     {
-        if (multiMonitor && GetProcessDpiAwarenessFromHWND(w) != PROCESS_PER_MONITOR_DPI_AWARE) borderSize = { 0, 0 };
+        if (auto dpiAwareness = GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(w));
+            multiMonitor && dpiAwareness != DPI_AWARENESS_PER_MONITOR_AWARE)
+            borderSize = { 0, 0 };
 
         flags<Corner, int> otherCorner;
         // 1°
@@ -334,7 +321,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
             if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), unitSize, sf0, sf, borderWidth, borderHeight))
                 break;
         
-        bool multiMonitor = windowsOrderInCorners.size() > 1;
+        bool multiMonitor = monitorRects.size() > 1;
         for(int i = 0; i < 4; i++)
             adjustWindowsInCorner(windowRects, Corner(i), mrect, mon, mcvw, { unitSize, { borderWidth, borderHeight }, multiMonitor });
     }
@@ -453,7 +440,7 @@ static void displayMonitorsAndWindows(std::map<HMONITOR, Rect>& monitorRects, st
     {
         auto const& rect = windowRects[w];
         cout << w << ": " << ss.second << '(' << ss.first << ')' << ':' << rect.left << ':' << rect.top << ':'
-            << rect.right << ':' << rect.bottom << endl;
+            << rect.right << ':' << rect.bottom << "dpiAwareness=" << GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(w)) << endl;
     }
 }
 
