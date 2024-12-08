@@ -234,12 +234,6 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
         long maxIncreaseY = maxIncreaseX;
         bool result = false;
         auto& wrect = windowRects.at(w);
-        if (oldWindowMonitor.contains(w))
-        {
-            auto& oldWrect = get<Rect>(oldWindowMonitor[w]);
-            maxIncreaseX = max(maxIncreaseX, oldWrect.right - oldWrect.left - (wrect.right - wrect.left));
-            maxIncreaseY = max(maxIncreaseY, oldWrect.bottom - oldWrect.top - (wrect.bottom - wrect.top));
-        }
         int borderWidth = borderSize.cx;
         int borderHeight = borderSize.cy;
         if (wrect.right - wrect.left + maxIncreaseX > mrect.right - mrect.left)
@@ -252,7 +246,7 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
             wrect.top = mrect.top - borderHeight;
             wrect.bottom = mrect.bottom + borderHeight;
         }
-        RECT newRect;
+        RECT newRect = wrect;
         if (corner & Corner::right)
         {
             newRect.right = mrect.right + borderWidth - i * unitSize;
@@ -440,7 +434,8 @@ static void displayMonitorsAndWindows(std::map<HMONITOR, Rect>& monitorRects, st
     {
         auto const& rect = windowRects[w];
         cout << w << ": " << ss.second << '(' << ss.first << ')' << ':' << rect.left << ':' << rect.top << ':'
-            << rect.right << ':' << rect.bottom << "dpiAwareness=" << GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(w)) << endl;
+             << rect.right << ':' << rect.bottom << "dpiAwareness=" 
+             << GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(w)) << endl;
     }
 }
 
@@ -468,7 +463,7 @@ static bool detectChangedWindows(std::map<HWND, std::tuple<HMONITOR, Corner, Rec
         if (!oldWindowMonitor.contains(w))
         {
             changed = true;
-            auto mrect = monitorRects.at(get<HMONITOR>(r));
+            auto &mrect = monitorRects.at(get<HMONITOR>(r));
             if ((GetWindowLong(w, GWL_STYLE) & WS_MAXIMIZEBOX) == 0)
             {
                 POINT cursorPos;
@@ -528,9 +523,7 @@ void arrangeAllWindows(bool force)
     displayMonitorsAndWindows(monitorRects, windowRects);
     auto windowsOrderInCorners = distributeWindowsInCorners(windowRects, windowMonitor, newWindows, monitorRects);
 
-    // TODO there is a reference to oldWindowMonitor in adjustWindowsInMonitorCorners, try to move 
-    // this line after and check if windows are resized correctly, otherwise remove that reference
-    oldWindowMonitor = windowMonitor; 
+    oldWindowMonitor = windowMonitor;
     adjustWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
     // save window sizes after adjustment for size change detection to remain stable
     for (auto& [w, mcr] : oldWindowMonitor) if (windowRects.contains(w)) get<Rect>(mcr) = windowRects[w];
@@ -660,4 +653,3 @@ writeRegistryValue<wstring, REG_SZ>(basic_string_view<TCHAR> key, basic_string_v
 
     return result;
 }
-
