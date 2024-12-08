@@ -158,7 +158,7 @@ static BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
 
     Rect &rect = windows[hWnd];
     GetWindowRect(hWnd, &rect);
-    if (string processName = GetProcessNameFromHWND(hWnd); processName == "ApplicationFrameHost.exe" || IsIconic(hWnd))
+    if (string processName = GetProcessNameFromHWND(hWnd); IsIconic(hWnd))
     {
         windows.erase(hWnd);
         windowTitles.erase(hWnd);
