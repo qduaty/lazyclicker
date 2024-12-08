@@ -1,4 +1,3 @@
 - support vertical screens (different order of corners)
 - consider supporting window selection with clicking, which
 disables the top-right corner
-- place new non-modal dialogs in the same corner as another window from the same process as they tend to jump all over the screen
