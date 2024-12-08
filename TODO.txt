@@ -1,1 +1,0 @@
-1. Should save the maximum size a window ever had (with both w and h not smaller than current) and always try to increase to that size regardless of allowed units. Otherwise a sufficient number of windows on a screen may reduce a fullscreen window beyond allowed increase units 
