@@ -641,3 +641,23 @@ writeRegistryValue<basic_string_view<TCHAR>, REG_SZ>(basic_string_view<TCHAR> ke
 
     return result;
 }
+
+template<>bool
+writeRegistryValue<wstring, REG_SZ>(basic_string_view<TCHAR> key, basic_string_view<TCHAR> name, const wstring& v)
+{
+    HKEY hKey;
+    bool result = false;
+    if (RegCreateKeyEx(HKEY_CURRENT_USER, key.data(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS)
+    {
+        if (RegSetValueEx(hKey, name.data(), 0, REG_SZ, (const BYTE*)v.data(), DWORD(sizeof(wchar_t) * v.size())) == ERROR_SUCCESS)
+            result = true;
+        else 
+            cerr << "Failed to set value" << endl;
+        RegCloseKey(hKey);
+    }
+    else 
+        cerr << "Failed to create/open key" << endl;
+
+    return result;
+}
+
