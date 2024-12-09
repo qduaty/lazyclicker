@@ -210,11 +210,11 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
                                   const std::map<flags<Corner, int>, std::multimap<size_t, HWND>>& mcvw, 
                                   tuple<int /*unitSize*/, SIZE /*borderSize*/, bool /*multiMonitor*/> settings)
 {
-    auto& [unitSize, borderSize, multiMonitor] = settings;
     int i = 0;
     const auto& windows = mcvw.at(corner);
     for (auto& [s, w] : windows)
     {
+        auto [unitSize, borderSize, multiMonitor] = settings;
         if (auto dpiAwareness = GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(w));
             multiMonitor && dpiAwareness != DPI_AWARENESS_PER_MONITOR_AWARE)
             borderSize = { 0, 0 }; // unaware windows may be resized in context of a different screen
@@ -230,12 +230,11 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
         // 3°
         otherCorner = corner ^ Corner::bottomright;
         long dx1 = max(dx0, long(mcvw.at(otherCorner).size()) * unitSize);
-        long maxIncreaseX = windowops_maxIncrease;
-        long maxIncreaseY = maxIncreaseX;
-        bool result = false;
         auto& wrect = windowRects.at(w);
         int borderWidth = borderSize.cx;
         int borderHeight = borderSize.cy;
+        long maxIncreaseX = windowops_maxIncrease;
+        long maxIncreaseY = maxIncreaseX;
         if (wrect.right - wrect.left + maxIncreaseX > mrect.right - mrect.left)
         {
             wrect.left = mrect.left - borderWidth;
@@ -268,7 +267,7 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
             newRect.bottom = min(wrect.bottom + newRect.top - wrect.top, mrect.bottom - dy + borderHeight);
         }
         wrect = newRect;
-        result = MoveWindow(w, wrect.left, wrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
+        bool result = MoveWindow(w, wrect.left, wrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
         if (result)
         {
             array<const char*, 4> cornerNames{ "Corner::topleft", "Corner::topright", "Corner::bottomleft", "Corner::bottomright" };
@@ -276,7 +275,7 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
             cout << cornerNames[int(corner)] << ':' << i << ')';
             cout << "; dx=" << dx1 / unitSize << ", dy=" << dy / unitSize;
             cout << "; relative: " << wrect.left - mrect.left << ':';
-            cout << wrect.top - mrect.top << ':' << wrect.right - mrect.right << ':' << wrect.bottom - mrect.bottom << '[';
+            cout << wrect.top - mrect.top << ':' << wrect.right - mrect.right << ':' << wrect.bottom - mrect.bottom << endl;
         }
         else
         {
@@ -284,7 +283,6 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
             oldWindowMonitor.erase(w);
         }
 
-        cout << result << ']' << endl;
         i++;
     }
 }
