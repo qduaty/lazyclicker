@@ -203,7 +203,7 @@ static bool loadThemeData(const HWND& w, int& unitSize, double sf0, double sf, i
     return false;
 }
 
-static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects, 
+static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects, 
                                   const flags<Corner, int>& corner,
                                   const Rect& mrect,
                                   const HMONITOR& mon,
@@ -315,7 +315,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
         
         bool multiMonitor = monitorRects.size() > 1;
         for(int i = 0; i < 4; i++)
-            adjustWindowsInCorner(windowRects, Corner(i), mrect, mon, mcvw, { unitSize, { borderWidth, borderHeight }, multiMonitor });
+            adjustWindowsInCornerLandscape(windowRects, Corner(i), mrect, mon, mcvw, { unitSize, { borderWidth, borderHeight }, multiMonitor });
     }
 }
 
