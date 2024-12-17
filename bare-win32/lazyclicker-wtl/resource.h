@@ -16,10 +16,8 @@
 #define IDR_MAINFRAME                   128
 #define IDI_LAZYCLICKER                 130
 #define IDC_SLIDER_ALLOWED_INCREASE     1000
+#define IDC_CHECK_DOUBLE_DISTANCE_AROUND_TOPRIGHT_CORNER 1001
 #define IDC_STATIC                      -1
-
-#define WM_TRAYICON (WM_USER + 1)
-#define WM_SLIDER_CHANGE (WM_USER + 2)
 
 // Next default values for new objects
 // 
@@ -28,7 +26,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        132
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1001
+#define _APS_NEXT_CONTROL_VALUE         1002
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

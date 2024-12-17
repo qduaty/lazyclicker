@@ -7,6 +7,10 @@
 #include "resource.h"
 #include "windowops.h"
 
+#define WM_TRAYICON (WM_USER + 1)
+#define WM_SLIDER_CHANGE (WM_USER + 2)
+#define WM_CHECKBOX_CHANGE (WM_USER + 3)
+
 CAppModule _Module;
 constexpr TCHAR settingsKey[] = _T("Software\\qduaty\\lazyclicker\\Preferences");
 constexpr TCHAR startupKey[] = _T("Software\\Microsoft\\Windows\\CurrentVersion\\Run");
@@ -25,6 +29,7 @@ public:
         MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
         COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
         MSG_WM_HSCROLL(OnHScroll)
+        COMMAND_HANDLER(IDC_CHECK_DOUBLE_DISTANCE_AROUND_TOPRIGHT_CORNER, BN_CLICKED, OnCheckBoxClicked)
     END_MSG_MAP()
 
     LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL const& /*bHandled*/)
@@ -35,6 +40,8 @@ public:
         m_slider.GetClientRect(&sliderRect);
         m_slider.SetRange(0, sliderRect.right - sliderRect.left);
         m_slider.SetPos(allowedIncrease);
+        m_checkBox.Attach(GetDlgItem(IDC_CHECK_DOUBLE_DISTANCE_AROUND_TOPRIGHT_CORNER));
+        m_checkBox.SetCheck(doubleDistanceAroundTopRightCorner);
         return TRUE;
     }
 
@@ -46,11 +53,13 @@ public:
     }
 
     void OnHScroll(int nScrollCode, short [[maybe_unused]] nPos, HWND hwndScrollBar);
-
+    LRESULT OnCheckBoxClicked(WORD /*wNotifyCode*/, WORD /*wID*/, HWND__ const* /*hWndCtl*/, BOOL const& /*bHandled*/);
     int allowedIncrease = 0;
+    bool doubleDistanceAroundTopRightCorner = false;
 private:
     CMainWnd* pMainWindow = nullptr;
     CTrackBarCtrl m_slider;
+    CButton m_checkBox;
 };
 
 class CMainWnd : public CWindowImpl<CMainWnd>
@@ -66,19 +75,28 @@ public:
         MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
         MESSAGE_HANDLER(WM_TIMER, OnTimer)
         MESSAGE_HANDLER(WM_SLIDER_CHANGE, OnSliderChange)
+        MESSAGE_HANDLER(WM_CHECKBOX_CHANGE, OnCheckboxChange)
     END_MSG_MAP()
 
-    LRESULT OnTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) const
+    LRESULT OnTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL const& /*bHandled*/) const
     {
         if (m_bAutoArrange)
             arrangeAllWindows();
         return 0;
     }
 
-    LRESULT OnSliderChange(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/) const
+    LRESULT OnSliderChange(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL const& /*bHandled*/) const
     {
         windowops_maxIncrease = static_cast<int>(wParam);
         writeRegistryValue<DWORD, REG_DWORD>(settingsKey, L"allowedIncrease", windowops_maxIncrease);
+        arrangeAllWindows();
+        return 0;
+    }
+
+    LRESULT OnCheckboxChange(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL const& /*bHandled*/) const
+    {
+        doubleDistanceAroundTopRightCorner = static_cast<bool>(wParam);
+        writeRegistryValue<DWORD, REG_DWORD>(settingsKey, L"doubleDistanceAroundTopRightCorner", doubleDistanceAroundTopRightCorner);
         arrangeAllWindows();
         return 0;
     }
@@ -92,6 +110,8 @@ public:
         updateTrayIcon(true);
         windowops_maxIncrease = readRegistryValue<DWORD, REG_DWORD>(settingsKey, L"allowedIncrease").value_or(0);
         settingsDlg.allowedIncrease = windowops_maxIncrease;
+        doubleDistanceAroundTopRightCorner = readRegistryValue<DWORD, REG_DWORD>(settingsKey, L"doubleDistanceAroundTopRightCorner").value_or(0);
+        settingsDlg.doubleDistanceAroundTopRightCorner = doubleDistanceAroundTopRightCorner;
         TCHAR processName[MAX_PATH] = { 0 };
         if (GetModuleFileName(hInstance, processName, MAX_PATH))
             writeRegistryValue<wstring, REG_SZ>(startupKey, L"lazyclicker", processName);
@@ -234,4 +254,11 @@ inline void CSettingsDlg::OnHScroll(int nScrollCode, short [[maybe_unused]] nPos
         allowedIncrease = m_slider.GetPos();
         pMainWindow->SendMessage(WM_SLIDER_CHANGE, allowedIncrease);
     }
+}
+
+inline LRESULT CSettingsDlg::OnCheckBoxClicked(WORD, WORD, HWND__ const*, BOOL const&) 
+{
+    doubleDistanceAroundTopRightCorner = m_checkBox.GetCheck();
+    pMainWindow->SendMessage(WM_CHECKBOX_CHANGE, doubleDistanceAroundTopRightCorner);
+    return 0;
 }

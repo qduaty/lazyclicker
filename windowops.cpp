@@ -12,6 +12,7 @@
 using namespace std;
 
 int windowops_maxIncrease = 0;
+bool doubleDistanceAroundTopRightCorner = false;
 
 /// <summary>
 /// enum class wrapper
