@@ -203,7 +203,20 @@ static bool loadThemeData(const HWND& w, int& unitSize, double sf0, double sf, i
     return false;
 }
 
-static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects, 
+static void displayMovedWindowDetails(const HWND& w, const HMONITOR& mon, const flags<Corner, int>& corner, 
+                                      tuple<int, int, long, long> params, const pair<Rect, Rect>& rects)
+{
+    auto& [wrect, mrect] = rects;
+    auto &[i, unitSize, dx1, dy] = params;
+    array<const char*, 4> cornerNames{ "Corner::topleft", "Corner::topright", "Corner::bottomleft", "Corner::bottomright" };
+    cout << "Moved window " << w << " [" << windowTitles[w].first << "] " << '(' << monitorNames[mon] << '@';
+    cout << cornerNames[int(corner)] << ':' << i << ')';
+    cout << "; dx=" << dx1 / unitSize << ", dy=" << dy / unitSize;
+    cout << "; relative: " << wrect.left - mrect.left << ':';
+    cout << wrect.top - mrect.top << ':' << wrect.right - mrect.right << ':' << wrect.bottom - mrect.bottom << endl;
+}
+
+static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects,
                                   const flags<Corner, int>& corner,
                                   const Rect& mrect,
                                   const HMONITOR& mon,
@@ -268,15 +281,8 @@ static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects,
         }
         wrect = newRect;
         bool result = MoveWindow(w, wrect.left, wrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
-        if (result)
-        {
-            array<const char*, 4> cornerNames{ "Corner::topleft", "Corner::topright", "Corner::bottomleft", "Corner::bottomright" };
-            cout << "Moved window " << w << " [" << windowTitles[w].first << "] " << '(' << monitorNames[mon] << '@';
-            cout << cornerNames[int(corner)] << ':' << i << ')';
-            cout << "; dx=" << dx1 / unitSize << ", dy=" << dy / unitSize;
-            cout << "; relative: " << wrect.left - mrect.left << ':';
-            cout << wrect.top - mrect.top << ':' << wrect.right - mrect.right << ':' << wrect.bottom - mrect.bottom << endl;
-        }
+        if (result) 
+            displayMovedWindowDetails(w, mon, corner, { i, unitSize, dx1, dy }, { wrect, mrect });
         else
         {
             unmovableWindows.insert(w);
@@ -464,11 +470,12 @@ static bool detectChangedWindows(std::map<HWND, std::tuple<HMONITOR, Corner, Rec
             auto &mrect = monitorRects.at(get<HMONITOR>(r));
             if ((GetWindowLong(w, GWL_STYLE) & WS_MAXIMIZEBOX) == 0)
             {
+                using enum Corner;
                 POINT cursorPos;
                 GetCursorPos(&cursorPos);
-                flags<Corner, int> c = Corner::topleft;
-                if (abs(cursorPos.x - mrect.right) < abs(cursorPos.x - mrect.left)) c |= Corner::right;
-                if (abs(cursorPos.y - mrect.bottom) < abs(cursorPos.y - mrect.top)) c |= Corner::bottom;
+                flags<Corner, int> c = topleft;
+                if (abs(cursorPos.x - mrect.right) < abs(cursorPos.x - mrect.left)) c |= right;
+                if (abs(cursorPos.y - mrect.bottom) < abs(cursorPos.y - mrect.top)) c |= bottom;
                 get<Corner>(r) = Corner(c);
             }
             else newWindows.insert(w);
