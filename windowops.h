@@ -6,7 +6,7 @@
 #include <bit>
 
 extern int windowops_maxIncrease;
-extern bool doubleDistanceAroundTopRightCorner;
+extern bool avoidTopRightCorner;
 
 void arrangeAllWindows(bool force = false);
 /// <summary>

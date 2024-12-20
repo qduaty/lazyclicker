@@ -29,7 +29,7 @@ public:
         MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
         COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
         MSG_WM_HSCROLL(OnHScroll)
-        COMMAND_HANDLER(IDC_CHECK_DOUBLE_DISTANCE_AROUND_TOPRIGHT_CORNER, BN_CLICKED, OnCheckBoxClicked)
+        COMMAND_HANDLER(IDC_CHECK_AVOID_TOPRIGHT_CORNER, BN_CLICKED, OnCheckBoxClicked)
     END_MSG_MAP()
 
     LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL const& /*bHandled*/)
@@ -40,7 +40,7 @@ public:
         m_slider.GetClientRect(&sliderRect);
         m_slider.SetRange(0, sliderRect.right - sliderRect.left);
         m_slider.SetPos(allowedIncrease);
-        m_checkBox.Attach(GetDlgItem(IDC_CHECK_DOUBLE_DISTANCE_AROUND_TOPRIGHT_CORNER));
+        m_checkBox.Attach(GetDlgItem(IDC_CHECK_AVOID_TOPRIGHT_CORNER));
         m_checkBox.SetCheck(doubleDistanceAroundTopRightCorner);
         return TRUE;
     }
@@ -95,8 +95,8 @@ public:
 
     LRESULT OnCheckboxChange(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL const& /*bHandled*/) const
     {
-        doubleDistanceAroundTopRightCorner = static_cast<bool>(wParam);
-        writeRegistryValue<DWORD, REG_DWORD>(settingsKey, L"doubleDistanceAroundTopRightCorner", doubleDistanceAroundTopRightCorner);
+        avoidTopRightCorner = static_cast<bool>(wParam);
+        writeRegistryValue<DWORD, REG_DWORD>(settingsKey, L"doubleDistanceAroundTopRightCorner", avoidTopRightCorner);
         arrangeAllWindows();
         return 0;
     }
@@ -110,8 +110,8 @@ public:
         updateTrayIcon(true);
         windowops_maxIncrease = readRegistryValue<DWORD, REG_DWORD>(settingsKey, L"allowedIncrease").value_or(0);
         settingsDlg.allowedIncrease = windowops_maxIncrease;
-        doubleDistanceAroundTopRightCorner = readRegistryValue<DWORD, REG_DWORD>(settingsKey, L"doubleDistanceAroundTopRightCorner").value_or(0);
-        settingsDlg.doubleDistanceAroundTopRightCorner = doubleDistanceAroundTopRightCorner;
+        avoidTopRightCorner = readRegistryValue<DWORD, REG_DWORD>(settingsKey, L"doubleDistanceAroundTopRightCorner").value_or(0);
+        settingsDlg.doubleDistanceAroundTopRightCorner = avoidTopRightCorner;
         TCHAR processName[MAX_PATH] = { 0 };
         if (GetModuleFileName(hInstance, processName, MAX_PATH))
             writeRegistryValue<wstring, REG_SZ>(startupKey, L"lazyclicker", processName);
@@ -227,7 +227,7 @@ private:
     };
 };
 
-static int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpCmdLine, int nCmdShow)
+int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpCmdLine, int nCmdShow)
 {
     if (lpCmdLine == wstring_view(L"--console")) CreateConsole();
     _Module.Init(nullptr, hInstance);

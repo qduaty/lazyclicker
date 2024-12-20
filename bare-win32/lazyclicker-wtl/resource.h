@@ -16,7 +16,7 @@
 #define IDR_MAINFRAME                   128
 #define IDI_LAZYCLICKER                 130
 #define IDC_SLIDER_ALLOWED_INCREASE     1000
-#define IDC_CHECK_DOUBLE_DISTANCE_AROUND_TOPRIGHT_CORNER 1001
+#define IDC_CHECK_AVOID_TOPRIGHT_CORNER 1001
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

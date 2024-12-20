@@ -8,11 +8,12 @@
 #include <array>
 #include <list>
 #include <queue>
+#include <cassert>
 
 using namespace std;
 
 int windowops_maxIncrease = 0;
-bool doubleDistanceAroundTopRightCorner = false;
+bool avoidTopRightCorner = false;
 
 /// <summary>
 /// enum class wrapper
@@ -147,9 +148,9 @@ static BOOL IsAltTabWindow(HWND hwnd)
 
 // VISITOR PROCEDURES AND OTHER PROGRAM LOGIC
 
-static BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam)
+static BOOL CALLBACK enumWindowsProc(HWND hWnd, map<HWND, Rect>* pWindows)
 {
-    auto &windows = *bit_cast<map<HWND, Rect>*>(lParam);
+    auto &windows = *pWindows;
     if(!IsAltTabWindow(hWnd)) return TRUE;
 
     int length = GetWindowTextLength(hWnd);
@@ -236,11 +237,13 @@ static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects,
         flags<Corner, int> otherCorner;
         // 1°
         otherCorner = corner ^ Corner::right;
+        assert(mcvw.contains(otherCorner));
         long dx0 = long(mcvw.at(otherCorner).size()) * unitSize;
         // 2°
         otherCorner = corner ^ Corner::bottom;
         long n = max(0, long(mcvw.at(otherCorner).size()) - i);
         long dy = n * unitSize;
+
         // 3°
         otherCorner = corner ^ Corner::bottomright;
         long dx1 = max(dx0, long(mcvw.at(otherCorner).size()) * unitSize);
@@ -348,11 +351,13 @@ static pair<HMONITOR, Corner> findMainMonitorAndCorner(Rect const &wrect, const 
         auto minDist = mrect.diameter();
         for(int i = 0; i < 4; i++)
         {
-            int dist = wrect.distanceFromCorner(mrect, Corner(i));
+            auto c = Corner(i);
+            if (avoidTopRightCorner && c == Corner::topright) continue;
+            int dist = wrect.distanceFromCorner(mrect, c);
             if(dist < minDist)
             {
                 minDist = dist;
-                corner = Corner(i);
+                corner = c;
             }
         }
     }
@@ -362,7 +367,7 @@ static pair<HMONITOR, Corner> findMainMonitorAndCorner(Rect const &wrect, const 
 // API FUNCTIONS
 
 static void distributeNewWindowsInCorners(std::multimap<size_t, std::pair<HWND, Corner>>& mwc, const std::set<HWND>& newWindows, 
-    const Rect& mr, std::queue<Corner>& freeCorners, std::map<flags<Corner, int>, std::multimap<size_t, HWND>>& order)
+    const Rect& mrect, std::queue<Corner>& freeCorners, std::map<flags<Corner, int>, std::multimap<size_t, HWND>>& order)
 {
     using enum Corner;
     int i = 0;
@@ -373,7 +378,7 @@ static void distributeNewWindowsInCorners(std::multimap<size_t, std::pair<HWND, 
         auto& [w, c] = wc;
         if (!newWindows.contains(w) || unmovableWindows.contains(w)) continue;
 
-        if (!smallWindowsEnded && s >= mr.height() * 9 / 10)
+        if (!smallWindowsEnded && s >= mrect.height() * 9 / 10)
         {
             smallWindowsEnded = true;
             i = 0;
@@ -388,6 +393,11 @@ static void distributeNewWindowsInCorners(std::multimap<size_t, std::pair<HWND, 
         {
             c = corners[i % 4];
             i++;
+            if (avoidTopRightCorner && c == Corner::topright)
+            {
+                c = corners[i % 4];
+                i++;
+            }
         }
         order[c].insert({ s, w });
     }
@@ -416,8 +426,13 @@ static auto distributeWindowsInCorners(const map<HWND, Rect>& windowRects,
         size_t maxNumWindows = 0;
         for (auto const& [c, vw] : windowsOrderInCorners[m]) maxNumWindows = max(maxNumWindows, vw.size());
         for (auto const& [c, vw] : windowsOrderInCorners[m]) 
-            for (int i = 0; i < maxNumWindows - vw.size(); i++) 
-                freeCorners.push(Corner(int(c)));
+            for (int i = 0; i < maxNumWindows - vw.size(); i++)
+            {
+                auto corner = Corner(int(c));
+                if (avoidTopRightCorner && corner == Corner::topright) continue;
+                freeCorners.push(corner);
+            }
+                
 
         distributeNewWindowsInCorners(mwc, newWindows, monitorRects.at(m), freeCorners, windowsOrderInCorners[m]);
     }
@@ -491,7 +506,7 @@ void arrangeAllWindows(bool force)
 {
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
     map<HMONITOR, Rect> monitorRects;
-    EnumDisplayMonitors(nullptr, nullptr, MONITORENUMPROC(enumMonitorsProc), reinterpret_cast<LPARAM>(&monitorRects));
+    EnumDisplayMonitors(nullptr, nullptr, MONITORENUMPROC(enumMonitorsProc), bit_cast<LPARAM>(&monitorRects));
     for(auto &[m, r]: monitorRects)
     {
         MONITORINFOEXA info {sizeof(MONITORINFOEXA)};
@@ -501,7 +516,7 @@ void arrangeAllWindows(bool force)
     }
 
     map<HWND, Rect> windowRects;
-    EnumWindows(enumWindowsProc, reinterpret_cast<LPARAM>(&windowRects));
+    EnumWindows(WNDENUMPROC(enumWindowsProc), bit_cast<LPARAM>(&windowRects));
 
     // unmaximize windows to get rid of related issues
     for (auto const& [w, r] : windowRects)
