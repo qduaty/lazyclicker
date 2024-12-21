@@ -371,7 +371,7 @@ static void distributeNewWindowsInCorners(std::multimap<size_t, std::pair<HWND, 
 {
     using enum Corner;
     int i = 0;
-    array<Corner, 4> corners{ topright, bottomright, topleft, bottomleft };
+    array<Corner, 4> corners{ topleft, bottomleft, bottomright, topright};
     bool smallWindowsEnded = false;
     for (auto& [s, wc] : mwc)
     {
@@ -382,7 +382,7 @@ static void distributeNewWindowsInCorners(std::multimap<size_t, std::pair<HWND, 
         {
             smallWindowsEnded = true;
             i = 0;
-            corners = { topleft, topright, bottomleft, bottomright };
+            corners = { bottomright, bottomleft, topleft, topright };
         }
         if (freeCorners.size())
         {
