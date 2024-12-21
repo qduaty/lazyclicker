@@ -17,6 +17,9 @@ there is a menu option for bulk minimization
 - Alternatively, a menu option enables windows auto-arrangement
 and single click toggles bulk minimization
 - Double click displays a settings window
+- Can skip the top-right corner for setups where windows are 
+traditionally raised by clicking
+- Has preliminary support for touch screens
 ## Prerequisities
 - Windows 11 (may work on 10 but was not tested)
 - Visual Studio (2022) for WTL implementation or QtCreator for Qt6
