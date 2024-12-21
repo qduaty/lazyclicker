@@ -17,6 +17,7 @@
 #define IDI_LAZYCLICKER                 130
 #define IDC_SLIDER_ALLOWED_INCREASE     1000
 #define IDC_CHECK_AVOID_TOPRIGHT_CORNER 1001
+#define IDC_CHECK_INCREASE_UNIT_FOR_TOUCH 1002
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -26,7 +27,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        132
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1002
+#define _APS_NEXT_CONTROL_VALUE         1003
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

@@ -30,6 +30,7 @@ public:
         COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
         MSG_WM_HSCROLL(OnHScroll)
         COMMAND_HANDLER(IDC_CHECK_AVOID_TOPRIGHT_CORNER, BN_CLICKED, OnCheckBoxClicked)
+        COMMAND_HANDLER(IDC_CHECK_INCREASE_UNIT_FOR_TOUCH, BN_CLICKED, OnCheckBoxClicked)
     END_MSG_MAP()
 
     LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL const& /*bHandled*/)
@@ -40,8 +41,10 @@ public:
         m_slider.GetClientRect(&sliderRect);
         m_slider.SetRange(0, sliderRect.right - sliderRect.left);
         m_slider.SetPos(allowedIncrease);
-        m_checkBox.Attach(GetDlgItem(IDC_CHECK_AVOID_TOPRIGHT_CORNER));
-        m_checkBox.SetCheck(doubleDistanceAroundTopRightCorner);
+        m_checkBoxAvoidTopRightCorner.Attach(GetDlgItem(IDC_CHECK_AVOID_TOPRIGHT_CORNER));
+        m_checkBoxAvoidTopRightCorner.SetCheck(avoidTopRightCorner);
+        m_checkBoxIncreaseUnitSizeForTouch.Attach(GetDlgItem(IDC_CHECK_INCREASE_UNIT_FOR_TOUCH));
+        m_checkBoxIncreaseUnitSizeForTouch.SetCheck(increaseUnitSizeForTouch);
         return TRUE;
     }
 
@@ -53,13 +56,15 @@ public:
     }
 
     void OnHScroll(int nScrollCode, short [[maybe_unused]] nPos, HWND hwndScrollBar);
-    LRESULT OnCheckBoxClicked(WORD /*wNotifyCode*/, WORD /*wID*/, HWND__ const* /*hWndCtl*/, BOOL const& /*bHandled*/);
+    LRESULT OnCheckBoxClicked(WORD /*wNotifyCode*/, WORD wID, HWND__ const* /*hWndCtl*/, BOOL const& /*bHandled*/);
     int allowedIncrease = 0;
-    bool doubleDistanceAroundTopRightCorner = false;
+    bool avoidTopRightCorner = false;
+    bool increaseUnitSizeForTouch = false;
 private:
     CMainWnd* pMainWindow = nullptr;
     CTrackBarCtrl m_slider;
-    CButton m_checkBox;
+    CButton m_checkBoxAvoidTopRightCorner;
+    CButton m_checkBoxIncreaseUnitSizeForTouch;
 };
 
 class CMainWnd : public CWindowImpl<CMainWnd>
@@ -95,8 +100,19 @@ public:
 
     LRESULT OnCheckboxChange(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL const& /*bHandled*/) const
     {
-        avoidTopRightCorner = static_cast<bool>(wParam);
-        writeRegistryValue<DWORD, REG_DWORD>(settingsKey, L"doubleDistanceAroundTopRightCorner", avoidTopRightCorner);
+        switch (auto wId = static_cast<WORD>(wParam >> 16)) 
+        {
+        case IDC_CHECK_AVOID_TOPRIGHT_CORNER:
+            avoidTopRightCorner = static_cast<bool>(wParam & 0x01);
+            writeRegistryValue<DWORD, REG_DWORD>(settingsKey, L"avoidTopRightCorner", avoidTopRightCorner);
+            break;
+        case IDC_CHECK_INCREASE_UNIT_FOR_TOUCH:
+            increaseUnitSizeForTouch = static_cast<bool>(wParam & 0x01);
+            writeRegistryValue<DWORD, REG_DWORD>(settingsKey, L"increaseUnitSizeForTouch", increaseUnitSizeForTouch);
+            break;
+        default:
+            break;
+        }
         arrangeAllWindows();
         return 0;
     }
@@ -110,8 +126,10 @@ public:
         updateTrayIcon(true);
         windowops_maxIncrease = readRegistryValue<DWORD, REG_DWORD>(settingsKey, L"allowedIncrease").value_or(0);
         settingsDlg.allowedIncrease = windowops_maxIncrease;
-        avoidTopRightCorner = readRegistryValue<DWORD, REG_DWORD>(settingsKey, L"doubleDistanceAroundTopRightCorner").value_or(0);
-        settingsDlg.doubleDistanceAroundTopRightCorner = avoidTopRightCorner;
+        avoidTopRightCorner = readRegistryValue<DWORD, REG_DWORD>(settingsKey, L"avoidTopRightCorner").value_or(0);
+        settingsDlg.avoidTopRightCorner = avoidTopRightCorner;
+        increaseUnitSizeForTouch = readRegistryValue<DWORD, REG_DWORD>(settingsKey, L"increaseUnitSizeForTouch").value_or(0);
+        settingsDlg.increaseUnitSizeForTouch = increaseUnitSizeForTouch;
         TCHAR processName[MAX_PATH] = { 0 };
         if (GetModuleFileName(hInstance, processName, MAX_PATH))
             writeRegistryValue<wstring, REG_SZ>(startupKey, L"lazyclicker", processName);
@@ -256,9 +274,10 @@ inline void CSettingsDlg::OnHScroll(int nScrollCode, short [[maybe_unused]] nPos
     }
 }
 
-inline LRESULT CSettingsDlg::OnCheckBoxClicked(WORD, WORD, HWND__ const*, BOOL const&) 
+inline LRESULT CSettingsDlg::OnCheckBoxClicked(WORD, WORD wId, HWND__ const*, BOOL const&) 
 {
-    doubleDistanceAroundTopRightCorner = m_checkBox.GetCheck();
-    pMainWindow->SendMessage(WM_CHECKBOX_CHANGE, doubleDistanceAroundTopRightCorner);
+    avoidTopRightCorner = m_checkBoxAvoidTopRightCorner.GetCheck();
+    increaseUnitSizeForTouch = m_checkBoxIncreaseUnitSizeForTouch.GetCheck();
+    pMainWindow->SendMessage(WM_CHECKBOX_CHANGE, (DWORD(wId) << 16) | WORD((wId == IDC_CHECK_AVOID_TOPRIGHT_CORNER) ? avoidTopRightCorner : increaseUnitSizeForTouch));
     return 0;
 }

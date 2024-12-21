@@ -14,6 +14,7 @@ using namespace std;
 
 int windowops_maxIncrease = 0;
 bool avoidTopRightCorner = false;
+bool increaseUnitSizeForTouch = true;
 
 /// <summary>
 /// enum class wrapper
@@ -218,6 +219,17 @@ static void displayMovedWindowDetails(const HWND& w, const HMONITOR& mon, const 
     cout << wrect.top - mrect.top << ':' << wrect.right - mrect.right << ':' << wrect.bottom - mrect.bottom << endl;
 }
 
+static bool isMonitorTouchCapable(HMONITOR__ const* mon)
+{
+    UINT32 deviceCount = 0;
+    GetPointerDevices(&deviceCount, nullptr);
+    if (!deviceCount) return false;
+    auto pointerDevices = make_unique<POINTER_DEVICE_INFO[]>(deviceCount);
+    if (!GetPointerDevices(&deviceCount, pointerDevices.get())) return false;
+    for (int i = 0; i < deviceCount; i++) if (pointerDevices[i].monitor == mon) return true;
+    return false;
+}
+
 static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects,
                                   const flags<Corner, int>& corner,
                                   const Rect& mrect,
@@ -227,9 +239,11 @@ static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects,
 {
     int i = 0;
     const auto& windows = mcvw.at(corner);
+    bool increaseUnitSize = increaseUnitSizeForTouch && isMonitorTouchCapable(mon);
     for (auto& [s, w] : windows)
     {
         auto [unitSize, borderSize, multiMonitor] = settings;
+        if (increaseUnitSize) unitSize = unitSize * 3 / 2;
         if (auto dpiAwareness = GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(w));
             multiMonitor && dpiAwareness != DPI_AWARENESS_PER_MONITOR_AWARE)
             borderSize = { 0, 0 }; // unaware windows may be resized in context of a different screen
@@ -329,6 +343,13 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
     }
 }
 
+static bool shouldAvoidTopRightCorner(HMONITOR__ const* mon)
+{
+    if (avoidTopRightCorner) return true;
+    if(increaseUnitSizeForTouch && isMonitorTouchCapable(mon)) return true;
+    return false;
+}
+
 static pair<HMONITOR, Corner> findMainMonitorAndCorner(Rect const &wrect, const map<HMONITOR, Rect> &monitorRects)
 {
     size_t maxArea = 0;
@@ -352,7 +373,7 @@ static pair<HMONITOR, Corner> findMainMonitorAndCorner(Rect const &wrect, const 
         for(int i = 0; i < 4; i++)
         {
             auto c = Corner(i);
-            if (avoidTopRightCorner && c == Corner::topright) continue;
+            if (shouldAvoidTopRightCorner(mon) && c == Corner::topright) continue;
             int dist = wrect.distanceFromCorner(mrect, c);
             if(dist < minDist)
             {
@@ -367,7 +388,8 @@ static pair<HMONITOR, Corner> findMainMonitorAndCorner(Rect const &wrect, const 
 // API FUNCTIONS
 
 static void distributeNewWindowsInCorners(std::multimap<size_t, std::pair<HWND, Corner>>& mwc, const std::set<HWND>& newWindows, 
-    const Rect& mrect, std::queue<Corner>& freeCorners, std::map<flags<Corner, int>, std::multimap<size_t, HWND>>& order)
+    HMONITOR mon, const Rect& mrect, std::queue<Corner>& freeCorners, std::map<flags<Corner, int>, 
+    std::multimap<size_t, HWND>>& order)
 {
     using enum Corner;
     int i = 0;
@@ -393,7 +415,7 @@ static void distributeNewWindowsInCorners(std::multimap<size_t, std::pair<HWND, 
         {
             c = corners[i % 4];
             i++;
-            if (avoidTopRightCorner && c == Corner::topright)
+            if (shouldAvoidTopRightCorner(mon) && c == Corner::topright)
             {
                 c = corners[i % 4];
                 i++;
@@ -429,12 +451,12 @@ static auto distributeWindowsInCorners(const map<HWND, Rect>& windowRects,
             for (int i = 0; i < maxNumWindows - vw.size(); i++)
             {
                 auto corner = Corner(int(c));
-                if (avoidTopRightCorner && corner == Corner::topright) continue;
+                if (corner == Corner::topright && shouldAvoidTopRightCorner(m)) continue;
                 freeCorners.push(corner);
             }
                 
 
-        distributeNewWindowsInCorners(mwc, newWindows, monitorRects.at(m), freeCorners, windowsOrderInCorners[m]);
+        distributeNewWindowsInCorners(mwc, newWindows, m, monitorRects.at(m), freeCorners, windowsOrderInCorners[m]);
     }
     return windowsOrderInCorners;
 }

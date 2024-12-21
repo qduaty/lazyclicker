@@ -7,6 +7,7 @@
 
 extern int windowops_maxIncrease;
 extern bool avoidTopRightCorner;
+extern bool increaseUnitSizeForTouch;
 
 void arrangeAllWindows(bool force = false);
 /// <summary>
