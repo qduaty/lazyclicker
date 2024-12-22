@@ -239,7 +239,8 @@ static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects,
 {
     auto [unitSize, borderSize, multiMonitor] = settings;
     const auto& windows = mcvw.at(corner);
-    int i = 0;
+    bool isVertical = mrect.height() > mrect.width();
+    int i = isVertical ? int(windows.size() - 1) : 0;
     for (auto& [s, w] : windows)
     {
         if (auto dpiAwareness = GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(w));
@@ -296,7 +297,8 @@ static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects,
             oldWindowMonitor.erase(w);
         }
 
-        i++;
+        if (isVertical) i--;
+        else i++;
     }
 }
 
