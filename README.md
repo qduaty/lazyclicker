@@ -1,25 +1,24 @@
 # lazyclicker <img src="mainicon.png" width=24>
-There is a feature on Windows that allows to access windows with 
-no clicking. It is available as a mouse accessibility option and 
-is equivalent to Linux' X-Mouse. However, when a window rectangle 
-is inside a bigger one, it may get accidentally covered.
+Arranges visible windows on Windows screens so they all have a 
+visible corner. Maximized or prearranged windows will be slightly 
+reduced, windows that spanned multiple screens will be reduced to 
+a single screen, and big windows may be slightly enlarged to fit 
+the screen.
 
-This program arranges visible windows on Windows screens so they 
-all have a visible corner. Maximized or prearranged windows will 
-be slightly reduced, windows that spanned multiple screens will be 
-reduced to a single screen, and big windows may be slightly 
-enlarged to fit the screen.
+Motivation: the mouse accessibility option on Windows that allows 
+raising windows without clicking (equivalent to Linux' X-mouse) is 
+not very useful if windows are covered by others.
+
 ## Current status
 - Installs itself for startup and provides a menu option for 
 uninstall
-- Single click on the tray icon triggers windows rearrangement and
-there is a menu option for bulk minimization
-- Alternatively, a menu option enables windows auto-arrangement
-and single click toggles bulk minimization
-- Double click displays a settings window
-- Can skip the top-right corner for setups where windows are 
-traditionally raised by clicking
-- Has preliminary support for touch screens
+- Has manual and automatic mode
+- Can hide and restore all windows
+- Double click shows a settings window
+- Can skip the top-right corner for raising windows by clicking
+- Increases visible part of windows on touch screens
+- Arranges windows on vertical screens in reverse order so the big 
+ones remain wider
 ## Prerequisities
 - Windows 11 (may work on 10 but was not tested)
 - Visual Studio (2022) for WTL implementation or QtCreator for Qt6
