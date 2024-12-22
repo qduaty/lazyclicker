@@ -230,7 +230,7 @@ static bool isMonitorTouchCapable(HMONITOR__ const* mon)
     return false;
 }
 
-static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects,
+static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
                                   const HMONITOR& mon,
                                   const Rect& mrect,
                                   const flags<Corner, int>& corner,
@@ -239,8 +239,8 @@ static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects,
 {
     auto [unitSize, borderSize, multiMonitor] = settings;
     const auto& windows = mcvw.at(corner);
-    bool isVertical = mrect.height() > mrect.width();
-    int i = isVertical ? int(windows.size() - 1) : 0;
+    bool verticalScreen = mrect.height() > mrect.width();
+    int i = verticalScreen ? int(windows.size() - 1) : 0;
     for (auto& [s, w] : windows)
     {
         if (auto dpiAwareness = GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(w));
@@ -297,7 +297,7 @@ static void adjustWindowsInCornerLandscape(std::map<HWND, Rect>& windowRects,
             oldWindowMonitor.erase(w);
         }
 
-        if (isVertical) i--;
+        if (verticalScreen) i--;
         else i++;
     }
 }
@@ -330,7 +330,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, 
         bool multiMonitor = monitorRects.size() > 1;
         if (increaseUnitSizeForTouch && isMonitorTouchCapable(mon)) unitSize = unitSize * 3 / 2;
         for(int i = 0; i < 4; i++)
-            adjustWindowsInCornerLandscape(windowRects, mon, mrect, Corner(i), mcvw, { unitSize, { borderWidth, borderHeight }, multiMonitor });
+            adjustWindowsInCorner(windowRects, mon, mrect, Corner(i), mcvw, { unitSize, { borderWidth, borderHeight }, multiMonitor });
     }
 }
 
