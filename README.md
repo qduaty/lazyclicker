@@ -15,8 +15,8 @@ uninstall
 - Has manual and automatic mode
 - Can hide and restore all windows
 - Double click shows a settings window
-- Can skip the top-right corner for raising windows by clicking
-- Increases visible part of windows on touch screens
+- Can avoid placing windows in the top-right corner for raising windows by clicking
+- Increases visible part of windows on touch screens for the finger to fit
 - Arranges windows on vertical screens in reverse order so the big 
 ones remain wider
 ## Prerequisities
