@@ -121,13 +121,10 @@ static string GetProcessNameFromHWND(HWND hwnd)
 static BOOL IsAltTabWindow(HWND hwnd)
 {
     if (!hwnd) return FALSE;
-    TITLEBARINFO ti {sizeof(TITLEBARINFO)};
-    HWND hwndTry;
-    HWND hwndWalk = nullptr;
-
     if(!IsWindowVisible(hwnd)) return FALSE;
 
-    hwndTry = GetAncestor(hwnd, GA_ROOTOWNER);
+    HWND hwndWalk = nullptr;
+    HWND hwndTry = GetAncestor(hwnd, GA_ROOTOWNER);
     while(hwndTry != hwndWalk)
     {
         hwndWalk = hwndTry;
@@ -137,6 +134,7 @@ static BOOL IsAltTabWindow(HWND hwnd)
     if(hwndWalk != hwnd) return FALSE;
 
     // the following removes some task tray programs and "Program Manager"
+    TITLEBARINFO ti {sizeof(TITLEBARINFO)};
     GetTitleBarInfo(hwnd, &ti);
     if(ti.rgstate[0] & STATE_SYSTEM_INVISIBLE) return FALSE;
 
@@ -161,12 +159,14 @@ static BOOL CALLBACK enumWindowsProc(HWND hWnd, map<HWND, Rect>* pWindows)
 
     Rect &rect = windows[hWnd];
     GetWindowRect(hWnd, &rect);
-    if (string processName = GetProcessNameFromHWND(hWnd); processName == "ApplicationFrameHost.exe" || IsIconic(hWnd))
+    string processName = GetProcessNameFromHWND(hWnd);
+    if (processName == "ApplicationFrameHost.exe" || IsIconic(hWnd))
     {
         windows.erase(hWnd);
         windowTitles.erase(hWnd);
     }
     else windowTitles[hWnd] = {processName, buffer.get()};
+
     return TRUE;
 }
 
@@ -438,14 +438,27 @@ static auto distributeWindowsInCorners(const map<HWND, Rect>& windowRects,
         queue<Corner> freeCorners;
         size_t maxNumWindows = 0;
         for (auto const& [c, vw] : windowsOrderInCorners[m]) maxNumWindows = max(maxNumWindows, vw.size());
+#if 0
         for (auto const& [c, vw] : windowsOrderInCorners[m]) 
             for (int i = 0; i < maxNumWindows - vw.size(); i++)
             {
                 auto corner = Corner(int(c));
                 if (corner == Corner::topright && shouldAvoidTopRightCorner(m)) continue;
                 freeCorners.push(corner);
+            }        
+#else
+        using enum Corner;
+        array<Corner, 4> corners{ topleft, bottomleft, topright, bottomright};
+        for(auto corner: corners)
+        {
+            if (corner == topright && shouldAvoidTopRightCorner(m)) continue;
+            auto const& vw = windowsOrderInCorners[m][corner];
+            for (int i = 0; i < maxNumWindows - vw.size(); i++)
+            {
+                freeCorners.push(corner);
             }
-                
+        }
+#endif           
 
         distributeNewWindowsInCorners(mwc, newWindows, m, monitorRects.at(m), freeCorners, windowsOrderInCorners[m]);
     }
@@ -468,7 +481,8 @@ static void displayMonitorsAndWindows(std::map<HMONITOR, Rect>& monitorRects, st
         auto const& rect = windowRects[w];
         cout << w << ": " << ss.second << '(' << ss.first << ')' << ':' << rect.left << ':' << rect.top << ':'
              << rect.right << ':' << rect.bottom << "dpiAwareness=" 
-             << GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(w)) << endl;
+             << GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(w)) << ", style=" 
+             << hex << GetWindowLong(w, GWL_EXSTYLE) << dec << endl;
     }
 }
 
