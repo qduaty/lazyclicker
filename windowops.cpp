@@ -427,6 +427,7 @@ static auto distributeWindowsInCorners(const map<HWND, Rect>& windowRects,
 
     for (auto& [m, mwc] : windowsOnMonitor)
     {
+        auto& mrect = monitorRects.at(m);
         for (int i = 0; i < 4; i++) windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
         for (auto& [s, wc] : mwc)
         {
@@ -453,10 +454,13 @@ static auto distributeWindowsInCorners(const map<HWND, Rect>& windowRects,
         {
             if (corner == topright && shouldAvoidTopRightCorner(m)) continue;
             auto const& vw = windowsOrderInCorners[m][corner];
-            for (int i = 0; i < maxNumWindows - vw.size(); i++)
+            auto const& vwToLookForBig = windowsOrderInCorners[m][Corner(int(corner) ^ int(Corner::bottom))];
+            int overlapWindows = 0;
+            for (auto& [s, _] : vwToLookForBig) if (s > mrect.height() * 9 / 10) overlapWindows++;
+            for (int i = 0; i < int(maxNumWindows - vw.size()) - overlapWindows; i++)
             {
                 freeCorners.push(corner);
-            }
+}
         }
 #endif           
 
