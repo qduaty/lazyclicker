@@ -427,44 +427,30 @@ static auto distributeWindowsInCorners(const map<HWND, Rect>& windowRects,
 
     for (auto& [m, mwc] : windowsOnMonitor)
     {
-        auto& mrect = monitorRects.at(m);
-        for (int i = 0; i < 4; i++) windowsOrderInCorners[m][Corner(i)]; // ensure all window sets exist
+        auto const& mrect = monitorRects.at(m);
+        auto& monitorCornerWindows = windowsOrderInCorners[m];
+        for (int i = 0; i < 4; i++) monitorCornerWindows[Corner(i)]; // ensure all window sets exist
         for (auto& [s, wc] : mwc)
         {
             auto& [w, c] = wc;
             if (newWindows.contains(w) || unmovableWindows.contains(w)) continue;
-            windowsOrderInCorners[m][c].insert({ s, w });
+            monitorCornerWindows[c].insert({ s, w });
         }
 
         queue<Corner> freeCorners;
         size_t maxNumWindows = 0;
-        for (auto const& [c, vw] : windowsOrderInCorners[m]) maxNumWindows = max(maxNumWindows, vw.size());
-#if 0
-        for (auto const& [c, vw] : windowsOrderInCorners[m]) 
-            for (int i = 0; i < maxNumWindows - vw.size(); i++)
-            {
-                auto corner = Corner(int(c));
-                if (corner == Corner::topright && shouldAvoidTopRightCorner(m)) continue;
-                freeCorners.push(corner);
-            }        
-#else
+        for (auto const& [c, vw] : monitorCornerWindows) maxNumWindows = max(maxNumWindows, vw.size());
         using enum Corner;
-        array<Corner, 4> corners{ topleft, bottomleft, topright, bottomright};
-        for(auto corner: corners)
+        for(auto corner: { topleft, bottomleft, topright, bottomright })
         {
             if (corner == topright && shouldAvoidTopRightCorner(m)) continue;
-            auto const& vw = windowsOrderInCorners[m][corner];
-            auto const& vwToLookForBig = windowsOrderInCorners[m][Corner(int(corner) ^ int(Corner::bottom))];
-            int overlapWindows = 0;
-            for (auto& [s, _] : vwToLookForBig) if (s > mrect.height() * 9 / 10) overlapWindows++;
-            for (int i = 0; i < int(maxNumWindows - vw.size()) - overlapWindows; i++)
-            {
-                freeCorners.push(corner);
-}
+            auto const& vw = monitorCornerWindows[corner];
+            auto const& vwToLookForBig = monitorCornerWindows[Corner(flags<Corner, int>(corner) ^ Corner::bottom)];
+            auto freeSpace = int(maxNumWindows - vw.size());
+            for (auto& [s, _] : vwToLookForBig) if (s > mrect.height() * 9 / 10) freeSpace--;
+            for (int i = 0; i < freeSpace; i++) freeCorners.push(corner);
         }
-#endif           
-
-        distributeNewWindowsInCorners(mwc, newWindows, m, monitorRects.at(m), freeCorners, windowsOrderInCorners[m]);
+        distributeNewWindowsInCorners(mwc, newWindows, m, monitorRects.at(m), freeCorners, monitorCornerWindows);
     }
     return windowsOrderInCorners;
 }
