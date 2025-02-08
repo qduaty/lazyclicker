@@ -21,18 +21,19 @@ bool increaseUnitSizeForTouch = true;
 /// </summary>
 /// <typeparam name="E">enum class</typeparam>
 /// <typeparam name="I">underlying int</typeparam>
-template<typename E, typename I>struct flags {
-    I v;
+template<typename Enum>struct flags {
+    using Int = typename std::underlying_type_t<Enum>;
+    Int value;
     flags() = default;
-    flags(E x) : v(I(x)) {}
-    auto operator=(E x) { v = I(x); return *this; }
-    auto operator=(I x) { v = x; return *this; }
-    operator I() const { return v; }
-    explicit operator E() const { return E(v); }
-    static friend I operator&(flags f, E x) { return f.v & I(x); }
-    static friend I operator^(flags f, E x) { return f.v ^ I(x); }
-    static friend bool operator==(flags f, E x) { return f.v == I(x); }
-    flags& operator|=(E x) { v |= I(x); return *this; }
+    flags(Enum x) : value(Int(x)) {}
+    auto operator=(Enum x) { value = Int(x); return *this; }
+    auto operator=(Int x) { value = x; return *this; }
+    operator Int() const { return value; }
+    explicit operator Enum() const { return Enum(value); }
+    static friend Int operator&(flags f, Enum x) { return f.value & Int(x); }
+    static friend Int operator^(flags f, Enum x) { return f.value ^ Int(x); }
+    static friend bool operator==(flags f, Enum x) { return f.value == Int(x); }
+    flags& operator|=(Enum x) { value |= Int(x); return *this; }
 };
 
 enum class Corner : int { top = 0, left = 0, topleft = top | left, right = 1, topright = top | right,
@@ -71,7 +72,7 @@ struct Rect : public RECT
         top -= max(0L, bottom - monRect.bottom);
     }
 
-    int distanceFromCorner(const Rect &mrect, flags<Corner, int> c) const
+    int distanceFromCorner(const Rect &mrect, flags<Corner> c) const
     {
         POINT mcorner = {};
         POINT wcorner = {};
@@ -176,7 +177,7 @@ static BOOL CALLBACK enumMonitorsProc(HMONITOR monitor, HDC__ const */*dc*/, REC
     return TRUE;
 }
 
-static void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner, int>, vector<HWND>>> &windowsOrderInCorners,
+static void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner>, vector<HWND>>> &windowsOrderInCorners,
                                     const map<HMONITOR, RECT> &monitorRects,
                                     map<HWND, RECT> &windowRects,
                                     size_t /*unitSize*/)
@@ -206,12 +207,12 @@ static bool loadThemeData(const HWND& w, int& unitSize, double sf0, double sf, i
     return false;
 }
 
-static void displayMovedWindowDetails(const HWND& w, const HMONITOR& mon, const flags<Corner, int>& corner, 
+static void displayMovedWindowDetails(const HWND& w, const HMONITOR& mon, const flags<Corner>& corner, 
                                       tuple<int, int, long, long> params, const pair<Rect, Rect>& rects)
 {
     auto& [wrect, mrect] = rects;
     auto &[i, unitSize, dx1, dy] = params;
-    array<const char*, 4> cornerNames{ "Corner::topleft", "Corner::topright", "Corner::bottomleft", "Corner::bottomright" };
+    array<const char*, 4> cornerNames{ "topleft", "topright", "bottomleft", "bottomright" };
     cout << "Moved window " << w << " [" << windowTitles[w].first << "] " << '(' << monitorNames[mon] << '@';
     cout << cornerNames[int(corner)] << ':' << i << ')';
     cout << "; dx=" << dx1 / unitSize << ", dy=" << dy / unitSize;
@@ -233,8 +234,8 @@ static bool isMonitorTouchCapable(HMONITOR__ const* mon)
 static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
                                   const HMONITOR& mon,
                                   const Rect& mrect,
-                                  const flags<Corner, int>& corner,
-                                  const std::map<flags<Corner, int>, std::multimap<size_t, HWND>>& mcvw, 
+                                  const flags<Corner>& corner,
+                                  const std::map<flags<Corner>, std::multimap<size_t, HWND>>& mcvw, 
                                   tuple<int /*unitSize*/, SIZE /*borderSize*/, bool /*multiMonitor*/> settings)
 {
     auto [unitSize, borderSize, multiMonitor] = settings;
@@ -247,14 +248,15 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
             multiMonitor && dpiAwareness != DPI_AWARENESS_PER_MONITOR_AWARE)
             borderSize = { 0, 0 }; // prevent dpi unaware windows from being resized in context of a different screen
 
-        flags<Corner, int> otherCorner;
+        using enum Corner;
+        flags<Corner> otherCorner;
         // 1°
-        otherCorner = corner ^ Corner::bottom;
+        otherCorner = corner ^ bottom;
         long dy = max(0, long(mcvw.at(otherCorner).size()) - i) * unitSize - borderSize.cy;
         // 2°
-        otherCorner = corner ^ Corner::right;
+        otherCorner = corner ^ right;
         long dx = long(mcvw.at(otherCorner).size()) * unitSize;
-        otherCorner = corner ^ Corner::bottomright;
+        otherCorner = corner ^ bottomright;
         dx = max(dx, long(mcvw.at(otherCorner).size()) * unitSize) - borderSize.cx;
         auto& wrect = windowRects.at(w);
         if (wrect.width() + windowops_maxIncrease > mrect.width())
@@ -268,7 +270,7 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
             wrect.bottom = mrect.bottom + borderSize.cy;
         }
         RECT newRect = wrect;
-        if (corner & Corner::right)
+        if (corner & right)
         {
             newRect.right = mrect.right + borderSize.cx - i * unitSize;
             newRect.left = max(newRect.right - wrect.width(), mrect.left + dx);
@@ -278,7 +280,7 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
             newRect.left = mrect.left - borderSize.cx + i * unitSize;
             newRect.right = min(newRect.left + wrect.width(), mrect.right - dx);
         }
-        if (corner & Corner::bottom)
+        if (corner & bottom)
         {
             newRect.bottom = mrect.bottom + borderSize.cy - (long(windows.size()) - i - 1) * unitSize;
             newRect.top = max(newRect.bottom - wrect.height(), mrect.top + dy);
@@ -302,7 +304,7 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
     }
 }
 
-static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner, int>, multimap<size_t, HWND>>>& windowsOrderInCorners,
+static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner>, multimap<size_t, HWND>>>& windowsOrderInCorners,
                                           const map<HMONITOR, Rect>& monitorRects,
                                           map<HWND, Rect>& windowRects)
 {
@@ -379,7 +381,7 @@ static pair<HMONITOR, Corner> findMainMonitorAndCorner(Rect const &wrect, const 
 // API FUNCTIONS
 
 static void distributeNewWindowsInCorners(std::multimap<long, std::pair<HWND, Corner>>& mwc, const std::set<HWND>& newWindows, 
-    HMONITOR mon, const Rect& mrect, std::queue<Corner>& freeCorners, std::map<flags<Corner, int>, 
+    HMONITOR mon, const Rect& mrect, std::queue<Corner>& freeCorners, std::map<flags<Corner>, 
     std::multimap<size_t, HWND>>& order)
 {
     using enum Corner;
@@ -406,7 +408,7 @@ static void distributeNewWindowsInCorners(std::multimap<long, std::pair<HWND, Co
         {
             c = corners[i % 4];
             i++;
-            if (shouldAvoidTopRightCorner(mon) && c == Corner::topright)
+            if (shouldAvoidTopRightCorner(mon) && c == topright)
             {
                 c = corners[i % 4];
                 i++;
@@ -421,7 +423,7 @@ static auto distributeWindowsInCorners(const map<HWND, Rect>& windowRects,
                                        const set<HWND>& newWindows,
                                        const map<HMONITOR, Rect>& monitorRects)
 {
-    map<HMONITOR, map<flags<Corner, int>, multimap<size_t, HWND>>> windowsOrderInCorners;
+    map<HMONITOR, map<flags<Corner>, multimap<size_t, HWND>>> windowsOrderInCorners;
     map<HMONITOR, multimap<long, pair<HWND, Corner>>> windowsOnMonitor;
     for (auto& [w, mc] : windowMonitor) windowsOnMonitor[get<HMONITOR>(mc)].insert({ windowRects.at(w).height(), {w, get<Corner>(mc)} });
 
@@ -445,9 +447,9 @@ static auto distributeWindowsInCorners(const map<HWND, Rect>& windowRects,
         {
             if (corner == topright && shouldAvoidTopRightCorner(m)) continue;
             auto const& vw = monitorCornerWindows[corner];
-            auto const& vwToLookForBig = monitorCornerWindows[Corner(flags<Corner, int>(corner) ^ Corner::bottom)];
+            auto const& vwToLookForBig = monitorCornerWindows[Corner(flags<Corner>(corner) ^ Corner::bottom)];
             auto freeSpace = int(maxNumWindows - vw.size());
-            for (auto& [s, _] : vwToLookForBig) if (s > mrect.height() * 9 / 10) freeSpace--;
+            for (auto& [s, _] : vwToLookForBig) freeSpace -= int(s > mrect.height() * 9 / 10);
             for (int i = 0; i < freeSpace; i++) freeCorners.push(corner);
         }
         distributeNewWindowsInCorners(mwc, newWindows, m, monitorRects.at(m), freeCorners, monitorCornerWindows);
@@ -506,7 +508,7 @@ static bool detectChangedWindows(std::map<HWND, std::tuple<HMONITOR, Corner, Rec
                 using enum Corner;
                 POINT cursorPos;
                 GetCursorPos(&cursorPos);
-                flags<Corner, int> c = topleft;
+                flags c = topleft;
                 if (abs(cursorPos.x - mrect.right) < abs(cursorPos.x - mrect.left)) c |= right;
                 if (abs(cursorPos.y - mrect.bottom) < abs(cursorPos.y - mrect.top)) c |= bottom;
                 get<Corner>(r) = Corner(c);
@@ -669,25 +671,6 @@ writeRegistryValue<basic_string_view<TCHAR>, REG_SZ>(basic_string_view<TCHAR> ke
         RegCloseKey(hKey);
     }
     else cerr << "Failed to create/open key" << endl;
-
-    return result;
-}
-
-template<>bool
-writeRegistryValue<wstring, REG_SZ>(basic_string_view<TCHAR> key, basic_string_view<TCHAR> name, const wstring& v)
-{
-    HKEY hKey;
-    bool result = false;
-    if (RegCreateKeyEx(HKEY_CURRENT_USER, key.data(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS)
-    {
-        if (RegSetValueEx(hKey, name.data(), 0, REG_SZ, (const BYTE*)v.data(), DWORD(sizeof(wchar_t) * v.size())) == ERROR_SUCCESS)
-            result = true;
-        else 
-            cerr << "Failed to set value" << endl;
-        RegCloseKey(hKey);
-    }
-    else 
-        cerr << "Failed to create/open key" << endl;
 
     return result;
 }
