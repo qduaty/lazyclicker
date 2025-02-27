@@ -194,7 +194,7 @@ static void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner>, vecto
     }
 }
 
-static bool loadThemeData(const HWND& w, int& unitSize, double sf0, double sf, int& borderWidth, int& borderHeight)
+static bool loadThemeData(HWND w, double sf0, double sf, int& unitSize, int& borderWidth, int& borderHeight)
 {
     if (HTHEME theme = OpenThemeData(w, L"WINDOW"))
     {
@@ -207,7 +207,7 @@ static bool loadThemeData(const HWND& w, int& unitSize, double sf0, double sf, i
     return false;
 }
 
-static void displayMovedWindowDetails(const HWND& w, const HMONITOR& mon, const flags<Corner>& corner, 
+static void displayMovedWindowDetails(HWND w, HMONITOR mon, flags<Corner> corner, 
                                       tuple<int, int, long, long> params, const pair<Rect, Rect>& rects)
 {
     auto& [wrect, mrect] = rects;
@@ -232,9 +232,9 @@ static bool isMonitorTouchCapable(HMONITOR__ const* mon)
 }
 
 static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
-                                  const HMONITOR& mon,
+                                  HMONITOR mon,
                                   const Rect& mrect,
-                                  const flags<Corner>& corner,
+                                  flags<Corner> corner,
                                   const std::map<flags<Corner>, std::multimap<size_t, HWND>>& mcvw, 
                                   tuple<int /*unitSize*/, SIZE /*borderSize*/, bool /*multiMonitor*/> settings)
 {
@@ -327,7 +327,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner>,
         int borderHeight = 0;
         auto &mrect = monitorRects.at(mon);
         for (auto &[_, windows] : mcvw)
-            if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), unitSize, sf0, sf, borderWidth, borderHeight))
+            if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), sf0, sf, unitSize, borderWidth, borderHeight))
                 break;
         bool multiMonitor = monitorRects.size() > 1;
         if (increaseUnitSizeForTouch && isMonitorTouchCapable(mon)) unitSize = unitSize * 3 / 2;

@@ -132,7 +132,7 @@ public:
         settingsDlg.increaseUnitSizeForTouch = increaseUnitSizeForTouch;
         TCHAR processName[MAX_PATH] = { 0 };
         if (GetModuleFileName(hInstance, processName, MAX_PATH))
-            writeRegistryValue<wstring, REG_SZ>(startupKey, L"lazyclicker", processName);
+            writeRegistryValue<wstring_view, REG_SZ>(startupKey, L"lazyclicker", processName);
 
         return 0;
     }
@@ -177,7 +177,7 @@ public:
         {
         case ID_TRAYMENU_OPTION_AUTO_ARRANGE:
             m_bAutoArrange = !m_bAutoArrange;
-            writeRegistryValue<wstring, REG_SZ>(settingsKey, L"actionAuto_arrange_windows", m_bAutoArrange ? L"true" : L"false");
+            writeRegistryValue<wstring_view, REG_SZ>(settingsKey, L"actionAuto_arrange_windows", m_bAutoArrange ? L"true" : L"false");
             updateTrayIcon(false);
             break;
         case ID_TRAYMENU_OPTION_QUIT:

@@ -31,8 +31,8 @@ readRegistryValue(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHA
     return result;
 }
 
-template<typename T, int RegType>inline bool
-writeRegistryValue(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name, const T& v)
+template<typename T, int RegType>
+inline std::enable_if_t<!std::is_same_v<T, std::basic_string<TCHAR>>, bool> writeRegistryValue(std::basic_string_view<TCHAR> key, std::basic_string_view<TCHAR> name, const T& v)
 {
     HKEY hKey;
     bool result = false;
