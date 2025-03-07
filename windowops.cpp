@@ -380,9 +380,7 @@ static pair<HMONITOR, Corner> findMainMonitorAndCorner(Rect const &wrect, const 
 
 // API FUNCTIONS
 
-static void distributeNewWindowsInCorners(std::multimap<long, std::pair<HWND, Corner>>& mwc, const std::set<HWND>& newWindows, 
-    HMONITOR mon, const Rect& mrect, std::queue<Corner>& freeCorners, std::map<flags<Corner>, 
-    std::multimap<size_t, HWND>>& order)
+static void distributeNewWindowsInCorners(std::multimap<long, std::pair<HWND, Corner>>& mwc, const std::set<HWND>& newWindows, HMONITOR mon, const Rect& mrect, std::queue<Corner>& freeCorners, std::map<flags<Corner>, std::multimap<size_t, HWND>>& order)
 {
     using enum Corner;
     int i = 0;
@@ -418,18 +416,17 @@ static void distributeNewWindowsInCorners(std::multimap<long, std::pair<HWND, Co
     }
 }
 
-static auto distributeWindowsInCorners(const map<HWND, Rect>& windowRects,
-                                       const map<HWND, tuple<HMONITOR, Corner, Rect>>& windowMonitor,
+static auto distributeWindowsInCorners(const map<HWND, tuple<HMONITOR, Corner, Rect>>& windowMonitor,
                                        const set<HWND>& newWindows,
                                        const map<HMONITOR, Rect>& monitorRects)
 {
     map<HMONITOR, map<flags<Corner>, multimap<size_t, HWND>>> windowsOrderInCorners;
     map<HMONITOR, multimap<long, pair<HWND, Corner>>> windowsOnMonitor;
-    for (auto& [w, mc] : windowMonitor) windowsOnMonitor[get<HMONITOR>(mc)].insert({ windowRects.at(w).height(), {w, get<Corner>(mc)} });
+    for (auto& [w, mc] : windowMonitor) 
+        windowsOnMonitor[get<HMONITOR>(mc)].insert({ get<Rect>(mc).height(), {w, get<Corner>(mc)} });
 
     for (auto& [m, mwc] : windowsOnMonitor)
     {
-        auto const& mrect = monitorRects.at(m);
         auto& monitorCornerWindows = windowsOrderInCorners[m];
         for (int i = 0; i < 4; i++) monitorCornerWindows[Corner(i)]; // ensure all window sets exist
         for (auto& [s, wc] : mwc)
@@ -439,6 +436,7 @@ static auto distributeWindowsInCorners(const map<HWND, Rect>& windowRects,
             monitorCornerWindows[c].insert({ s, w });
         }
 
+        auto const& mrect = monitorRects.at(m);
         queue<Corner> freeCorners;
         size_t maxNumWindows = 0;
         for (auto const& [c, vw] : monitorCornerWindows) maxNumWindows = max(maxNumWindows, vw.size());
@@ -454,6 +452,7 @@ static auto distributeWindowsInCorners(const map<HWND, Rect>& windowRects,
         }
         distributeNewWindowsInCorners(mwc, newWindows, m, monitorRects.at(m), freeCorners, monitorCornerWindows);
     }
+
     return windowsOrderInCorners;
 }
 
@@ -561,7 +560,7 @@ void arrangeAllWindows(bool force)
     if(!force && !changed) return;
 
     displayMonitorsAndWindows(monitorRects, windowRects);
-    auto windowsOrderInCorners = distributeWindowsInCorners(windowRects, windowMonitor, newWindows, monitorRects);
+    auto windowsOrderInCorners = distributeWindowsInCorners(windowMonitor, newWindows, monitorRects);
 
     oldWindowMonitor = windowMonitor;
     adjustWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
