@@ -384,18 +384,18 @@ static void distributeNewWindowsInCorners(std::multimap<long, std::pair<HWND, Co
 {
     using enum Corner;
     int i = 0;
-    array<Corner, 4> corners{ topleft, bottomleft, bottomright, topright};
+    array<Corner, 4> corners{ topright, bottomright, topleft, bottomleft };
     bool smallWindowsEnded = false;
     for (auto& [s, wc] : mwc)
     {
         auto& [w, c] = wc;
         if (!newWindows.contains(w) || unmovableWindows.contains(w)) continue;
 
-        if (!smallWindowsEnded && s >= mrect.height() * 9 / 10)
+        if (!smallWindowsEnded && s >= mrect.height() - windowops_maxIncrease)
         {
             smallWindowsEnded = true;
             i = 0;
-            corners = { bottomright, bottomleft, topleft, topright };
+            corners = { bottomleft, bottomright, topleft, topright };
         }
         if (freeCorners.size())
         {
@@ -437,11 +437,11 @@ static auto distributeWindowsInCorners(const map<HWND, tuple<HMONITOR, Corner, R
         }
 
         auto const& mrect = monitorRects.at(m);
-        queue<Corner> freeCorners;
+        queue<Corner> freeCorners; 
         size_t maxNumWindows = 0;
         for (auto const& [c, vw] : monitorCornerWindows) maxNumWindows = max(maxNumWindows, vw.size());
         using enum Corner;
-        for(auto corner: { topleft, bottomleft, topright, bottomright })
+        for(auto corner: { topleft, bottomright, bottomleft, topright })
         {
             if (corner == topright && shouldAvoidTopRightCorner(m)) continue;
             auto const& vw = monitorCornerWindows[corner];
