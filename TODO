@@ -1,8 +1,5 @@
-1. place a new small window, if there's already a big window pushed away a 
-corner but no window in the opposite corner, in that opposite corner to fill
-the gap
-2. rework the concept of free corners to sides occupation:
+1. consider reworking the concept of free corners to sides occupation:
 - each side has 2 corners and the middle
 - small windows occupy sides in multiples of 2 (in opposite corners)
 - a big window occupies entire side (2 corners and the middle)
-3. change the calculation of a big window to include resize amount - and make that one 250px by default
+2. consider implementing center of the longer side of the screen, manual only

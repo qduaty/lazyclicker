@@ -304,9 +304,7 @@ static void adjustWindowsInCorner(std::map<HWND, Rect>& windowRects,
     }
 }
 
-static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner>, multimap<size_t, HWND>>>& windowsOrderInCorners,
-                                          const map<HMONITOR, Rect>& monitorRects,
-                                          map<HWND, Rect>& windowRects)
+static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner>, multimap<size_t, HWND>>>& windowsOrderInCorners, const map<HMONITOR, Rect>& monitorRects, map<HWND, Rect>& windowRects)
 {
     UINT dpiX;
     UINT dpiY;
@@ -422,8 +420,13 @@ static auto distributeWindowsInCorners(const map<HWND, tuple<HMONITOR, Corner, R
 {
     map<HMONITOR, map<flags<Corner>, multimap<size_t, HWND>>> windowsOrderInCorners;
     map<HMONITOR, multimap<long, pair<HWND, Corner>>> windowsOnMonitor;
-    for (auto& [w, mc] : windowMonitor) 
-        windowsOnMonitor[get<HMONITOR>(mc)].insert({ get<Rect>(mc).height(), {w, get<Corner>(mc)} });
+    for (auto& [w, mc] : windowMonitor) {
+        auto m = get<HMONITOR>(mc);
+        auto const& mrect = monitorRects.at(m);
+        bool verticalScreen = mrect.height() > mrect.width();
+        auto r = get<Rect>(mc);
+        windowsOnMonitor[m].insert({ verticalScreen ? r.width() : r.height(), {w, get<Corner>(mc)} });
+    }
 
     for (auto& [m, mwc] : windowsOnMonitor)
     {
@@ -437,6 +440,8 @@ static auto distributeWindowsInCorners(const map<HWND, tuple<HMONITOR, Corner, R
         }
 
         auto const& mrect = monitorRects.at(m);
+        bool verticalScreen = mrect.height() > mrect.width();
+
         queue<Corner> freeCorners; 
         size_t maxNumWindows = 0;
         for (auto const& [c, vw] : monitorCornerWindows) maxNumWindows = max(maxNumWindows, vw.size());
@@ -445,9 +450,10 @@ static auto distributeWindowsInCorners(const map<HWND, tuple<HMONITOR, Corner, R
         {
             if (corner == topright && shouldAvoidTopRightCorner(m)) continue;
             auto const& vw = monitorCornerWindows[corner];
-            auto const& vwToLookForBig = monitorCornerWindows[Corner(flags<Corner>(corner) ^ Corner::bottom)];
+            auto const& vwToLookForBig = monitorCornerWindows[Corner(flags<Corner>(corner) ^ (verticalScreen ? Corner::right : Corner::bottom))];
             auto freeSpace = int(maxNumWindows - vw.size());
-            for (auto& [s, _] : vwToLookForBig) freeSpace -= int(s > mrect.height() * 9 / 10);
+            for (auto& [s, _] : vwToLookForBig)
+                freeSpace -= int(s > (verticalScreen ? mrect.width() : mrect.height()) - windowops_maxIncrease);
             for (int i = 0; i < freeSpace; i++) freeCorners.push(corner);
         }
         distributeNewWindowsInCorners(mwc, newWindows, m, monitorRects.at(m), freeCorners, monitorCornerWindows);
