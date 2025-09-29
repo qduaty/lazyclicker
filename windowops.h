@@ -9,7 +9,7 @@ extern int windowops_maxIncrease;
 extern bool avoidTopRightCorner;
 extern bool increaseUnitSizeForTouch;
 
-void arrangeAllWindows(bool force = false);
+void arrangeAllWindows(bool force = false, bool reset = false);
 /// <summary>
 /// </summary>
 /// <returns>windows were minimized</returns>

@@ -155,6 +155,7 @@ public:
                 if(!m_bAutoArrange) menu.AppendMenu(MF_STRING, ID_TRAYMENU_TOGGLE_MINIMIZE_ALL, _T("Toggle minimize all windows"));
                 menu.AppendMenu(MF_STRING, ID_TRAYMENU_OPTION_QUIT, _T("Quit"));
                 menu.AppendMenu(MF_STRING, ID_TRAYMENU_OPTION_QUIT_AND_UNREGISTER, _T("Uninstall"));
+                menu.AppendMenu(MF_STRING, ID_TRAYMENU_OPTION_RESET_WINDOWS, _T("Reset window positions"));
 
                 POINT pt;
                 GetCursorPos(&pt);
@@ -189,6 +190,8 @@ public:
         case ID_TRAYMENU_TOGGLE_MINIMIZE_ALL:
             if(!toggleMinimizeAllWindows()) arrangeAllWindows(true); 
             break;
+		case ID_TRAYMENU_OPTION_RESET_WINDOWS:
+            arrangeAllWindows(true, true);
         default:
             break;
         }
@@ -241,7 +244,8 @@ private:
         ID_TRAYMENU_OPTION_AUTO_ARRANGE = 1001, 
         ID_TRAYMENU_OPTION_QUIT = 1002, 
         ID_TRAYMENU_OPTION_QUIT_AND_UNREGISTER = 1003,
-        ID_TRAYMENU_TOGGLE_MINIMIZE_ALL = 1004
+        ID_TRAYMENU_TOGGLE_MINIMIZE_ALL = 1004,
+		ID_TRAYMENU_OPTION_RESET_WINDOWS = 1005
     };
 };
 

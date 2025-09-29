@@ -176,16 +176,16 @@ static BOOL CALLBACK enumMonitorsProc(HMONITOR monitor, HDC__ const */*dc*/, REC
     return TRUE;
 }
 
-static void resetAllWindowPositions(const map<HMONITOR, map<flags<Corner>, vector<HWND>>> &windowsOrderInCorners,
-                                    const map<HMONITOR, RECT> &monitorRects,
-                                    map<HWND, RECT> &windowRects,
-                                    size_t /*unitSize*/)
+static void resetAllWindowPositions(
+    const map<HMONITOR, map<flags<Corner>, multimap<size_t, HWND>>>& windowsOrderInCorners,
+    const map<HMONITOR, Rect> &monitorRects,
+    map<HWND, Rect> &windowRects)
 {
     for(auto &[mon, mcvw]: windowsOrderInCorners)
     {
         auto &mrect = monitorRects.at(mon);
         for(auto &[corner, windows]: mcvw)
-            for(auto& w : windows)
+            for(auto& [s, w] : windows)
             {
                 auto const &wrect = windowRects.at(w);
                 MoveWindow(w, mrect.left, mrect.top, wrect.right - wrect.left, wrect.bottom - wrect.top, TRUE);
@@ -342,6 +342,7 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner>,
         if (onlyHWND)
         {
             hwndRect = &windowRects.at(onlyHWND);
+			// check if window is not big enough to fill the screen
             if (verticalScreen && hwndRect->height() + windowops_maxIncrease > mrect.height() ||
                 !verticalScreen && hwndRect->width() + windowops_maxIncrease > mrect.width())
             {
@@ -418,7 +419,7 @@ static pair<HMONITOR, Corner> findMainMonitorAndCorner(Rect const &wrect, const 
 
 // API FUNCTIONS
 
-static void distributeNewWindowsInCorners(std::multimap<long, std::pair<HWND, Corner>>& mwc, const std::set<HWND>& newWindows, HMONITOR mon, const Rect& mrect, std::queue<Corner>& freeCorners, std::map<flags<Corner>, std::multimap<size_t, HWND>>& order)
+static void distributeNewWindowsInCorners(std::multimap<long, std::pair<HWND, Corner>>& mwc, const std::set<HWND>& newWindows, HMONITOR__ const *mon, const Rect& mrect, std::queue<Corner>& freeCorners, std::map<flags<Corner>, std::multimap<size_t, HWND>>& order)
 {
     using enum Corner;
     int i = 0;
@@ -566,7 +567,7 @@ static bool hasChangedWindows(std::map<HWND, std::tuple<HMONITOR, Corner, Rect>>
     return changed;
 }
 
-void arrangeAllWindows(bool force)
+void arrangeAllWindows(bool force, bool reset)
 {
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
     map<HMONITOR, Rect> monitorRects;
@@ -611,6 +612,9 @@ void arrangeAllWindows(bool force)
     adjustWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
     // save window sizes after adjustment for size change detection to remain stable
     for (auto& [w, mcr] : oldWindowMonitor) if (windowRects.contains(w)) get<Rect>(mcr) = windowRects[w];
+
+    if(reset)
+		resetAllWindowPositions(windowsOrderInCorners, monitorRects, windowRects);
 }
 
 bool toggleMinimizeAllWindows()
