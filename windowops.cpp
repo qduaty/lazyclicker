@@ -328,8 +328,49 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner>,
                 break;
         bool multiMonitor = monitorRects.size() > 1;
         if (increaseUnitSizeForTouch && isMonitorTouchCapable(mon)) unitSize = unitSize * 3 / 2;
-        for(int i = 0; i < 4; i++)
-            adjustWindowsInCorner(windowRects, mon, mrect, Corner(i), windowsInCorners, { unitSize, { borderWidth, borderHeight }, multiMonitor });
+        HWND onlyHWND = {};
+		for (auto& [_, windows] : windowsInCorners)
+            if(windows.size() == 1 && !onlyHWND) 
+                onlyHWND = windows.begin()->second;
+			else if (windows.size() > 0)
+            { 
+                onlyHWND = {}; 
+                break; 
+            }
+        bool verticalScreen = mrect.height() > mrect.width();
+        Rect* hwndRect = nullptr;
+        if (onlyHWND)
+        {
+            hwndRect = &windowRects.at(onlyHWND);
+            if (verticalScreen && hwndRect->height() + windowops_maxIncrease > mrect.height() ||
+                !verticalScreen && hwndRect->width() + windowops_maxIncrease > mrect.width())
+            {
+                onlyHWND = {};
+            }
+        }
+        if (onlyHWND)
+        {
+            if (verticalScreen)
+            {
+                auto screenHeight = mrect.height();
+                auto windowHeight = hwndRect->height();
+                auto halfDelta = (screenHeight - windowHeight) / 2;
+                MoveWindow(onlyHWND, mrect.left, mrect.top + halfDelta, hwndRect->width(), windowHeight, TRUE);
+            }
+            else
+            {
+                auto screenWidth = mrect.width();
+                auto windowWidth = hwndRect->width();
+                auto halfDelta = (screenWidth - windowWidth) / 2;
+                MoveWindow(onlyHWND, mrect.left + halfDelta, mrect.top, windowWidth, hwndRect->height(), TRUE);
+            }
+            GetWindowRect(onlyHWND, hwndRect);
+        }
+        else
+        {
+            for (int i = 0; i < 4; i++)
+                adjustWindowsInCorner(windowRects, mon, mrect, Corner(i), windowsInCorners, { unitSize, { borderWidth, borderHeight }, multiMonitor });
+        }
     }
 }
 
