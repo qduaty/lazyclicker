@@ -25,14 +25,14 @@ template<typename Enum>struct flags {
     using Int = typename std::underlying_type_t<Enum>;
     Int value;
     flags() = default;
-    flags(Enum x) : value(Int(x)) {}
+    explicit(false) flags(Enum x) : value(Int(x)) {}
     auto operator=(Enum x) { value = Int(x); return *this; }
     auto operator=(Int x) { value = x; return *this; }
-    operator Int() const { return value; }
+    explicit(false) operator Int() const { return value; }
     explicit operator Enum() const { return Enum(value); }
-    static friend Int operator&(flags f, Enum x) { return f.value & Int(x); }
-    static friend Int operator^(flags f, Enum x) { return f.value ^ Int(x); }
-    static friend bool operator==(flags f, Enum x) { return f.value == Int(x); }
+    friend Int operator&(flags f, Enum x) { return f.value & Int(x); }
+    friend Int operator^(flags f, Enum x) { return f.value ^ Int(x); }
+    friend bool operator==(flags f, Enum x) { return f.value == Int(x); }
     flags& operator|=(Enum x) { value |= Int(x); return *this; }
 };
 
@@ -87,12 +87,12 @@ struct Rect : public RECT
         return int(sqrt(distX * distX + distY * distY));
     }
 
-    static friend bool operator!=(const RECT& self, const RECT& other)
+    friend bool operator!=(const RECT& self, const RECT& other)
     {
         return self.left != other.left || self.right != other.right || self.top != other.top || self.bottom != other.bottom;
     }
 
-    constexpr Rect(const RECT& other) : RECT(other) {}
+    constexpr explicit(false) Rect(const RECT& other) : RECT(other) {}
     Rect() = default;
 };
 
@@ -160,8 +160,7 @@ static BOOL CALLBACK enumWindowsProc(HWND hWnd, map<HWND, Rect>* pWindows)
 
     Rect &rect = windows[hWnd];
     GetWindowRect(hWnd, &rect);
-    string processName = GetProcessNameFromHWND(hWnd);
-    if (processName == "ApplicationFrameHost.exe" || IsIconic(hWnd))
+    if (string processName = GetProcessNameFromHWND(hWnd); processName == "ApplicationFrameHost.exe" || IsIconic(hWnd))
     {
         windows.erase(hWnd);
         windowTitles.erase(hWnd);
@@ -211,7 +210,7 @@ static void displayMovedWindowDetails(HWND w, HMONITOR mon, flags<Corner> corner
                                       tuple<int, int, long, long> params, const pair<Rect, Rect>& rects)
 {
     auto& [wrect, mrect] = rects;
-    auto &[i, unitSize, dx1, dy] = params;
+    auto const &[i, unitSize, dx1, dy] = params;
     array<const char*, 4> cornerNames{ "topleft", "topright", "bottomleft", "bottomright" };
     cout << "Moved window " << w << " [" << windowTitles[w].first << "] " << '(' << monitorNames[mon] << '@';
     cout << cornerNames[int(corner)] << ':' << i << ')';
@@ -227,7 +226,7 @@ static bool isMonitorTouchCapable(HMONITOR__ const* mon)
     if (!deviceCount) return false;
     auto pointerDevices = make_unique<POINTER_DEVICE_INFO[]>(deviceCount);
     if (!GetPointerDevices(&deviceCount, pointerDevices.get())) return false;
-    for (int i = 0; i < deviceCount; i++) if (pointerDevices[i].monitor == mon) return true;
+    for (auto i = 0U; i < deviceCount; i++) if (pointerDevices[i].monitor == mon) return true;
     return false;
 }
 
@@ -308,15 +307,15 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner>,
 {
     UINT dpiX;
     UINT dpiY;
-    static double sf0 = 0;
-    if (sf0 == 0)
+    static double baseScaleFactor = 0;
+    if (baseScaleFactor == 0)
     {
         HMONITOR primaryMonitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTOPRIMARY);
         GetDpiForMonitor(primaryMonitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
-        sf0 = 100 * dpiY / 96.0; // scaling factor of primary monitor for theme size correction
-        cerr << "sf0=" << sf0 << '%' << endl;
+        baseScaleFactor = 100 * dpiY / 96.0; // scaling factor of primary monitor for theme size correction
+        cerr << "sf0=" << baseScaleFactor << '%' << endl;
     }
-    for(auto &[mon, mcvw]: windowsOrderInCorners)
+    for(auto &[mon, windowsInCorners]: windowsOrderInCorners)
     {
         GetDpiForMonitor(mon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
         double sf = 100 * dpiY / 96.0;
@@ -324,13 +323,13 @@ static void adjustWindowsInMonitorCorners(const map<HMONITOR, map<flags<Corner>,
         int borderWidth = 0;
         int borderHeight = 0;
         auto &mrect = monitorRects.at(mon);
-        for (auto &[_, windows] : mcvw)
-            if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), sf0, sf, unitSize, borderWidth, borderHeight))
+        for (auto &[_, windows] : windowsInCorners)
+            if(windows.size() && loadThemeData(get<HWND>(*windows.begin()), baseScaleFactor, sf, unitSize, borderWidth, borderHeight))
                 break;
         bool multiMonitor = monitorRects.size() > 1;
         if (increaseUnitSizeForTouch && isMonitorTouchCapable(mon)) unitSize = unitSize * 3 / 2;
         for(int i = 0; i < 4; i++)
-            adjustWindowsInCorner(windowRects, mon, mrect, Corner(i), mcvw, { unitSize, { borderWidth, borderHeight }, multiMonitor });
+            adjustWindowsInCorner(windowRects, mon, mrect, Corner(i), windowsInCorners, { unitSize, { borderWidth, borderHeight }, multiMonitor });
     }
 }
 
@@ -428,9 +427,9 @@ static auto distributeWindowsInCorners(const map<HWND, tuple<HMONITOR, Corner, R
         windowsOnMonitor[m].insert({ verticalScreen ? r.width() : r.height(), {w, get<Corner>(mc)} });
     }
 
-    for (auto& [m, mwc] : windowsOnMonitor)
+    for (auto& [mon, mwc] : windowsOnMonitor)
     {
-        auto& monitorCornerWindows = windowsOrderInCorners[m];
+        auto& monitorCornerWindows = windowsOrderInCorners[mon];
         for (int i = 0; i < 4; i++) monitorCornerWindows[Corner(i)]; // ensure all window sets exist
         for (auto& [s, wc] : mwc)
         {
@@ -439,7 +438,7 @@ static auto distributeWindowsInCorners(const map<HWND, tuple<HMONITOR, Corner, R
             monitorCornerWindows[c].insert({ s, w });
         }
 
-        auto const& mrect = monitorRects.at(m);
+        auto const& mrect = monitorRects.at(mon);
         bool verticalScreen = mrect.height() > mrect.width();
 
         queue<Corner> freeCorners; 
@@ -448,7 +447,7 @@ static auto distributeWindowsInCorners(const map<HWND, tuple<HMONITOR, Corner, R
         using enum Corner;
         for(auto corner: { topleft, bottomright, bottomleft, topright })
         {
-            if (corner == topright && shouldAvoidTopRightCorner(m)) continue;
+            if (corner == topright && shouldAvoidTopRightCorner(mon)) continue;
             auto const& vw = monitorCornerWindows[corner];
             auto const& vwToLookForBig = monitorCornerWindows[Corner(flags<Corner>(corner) ^ (verticalScreen ? Corner::right : Corner::bottom))];
             auto freeSpace = int(maxNumWindows - vw.size());
@@ -456,7 +455,7 @@ static auto distributeWindowsInCorners(const map<HWND, tuple<HMONITOR, Corner, R
                 freeSpace -= int(s > (verticalScreen ? mrect.width() : mrect.height()) - windowops_maxIncrease);
             for (int i = 0; i < freeSpace; i++) freeCorners.push(corner);
         }
-        distributeNewWindowsInCorners(mwc, newWindows, m, monitorRects.at(m), freeCorners, monitorCornerWindows);
+        distributeNewWindowsInCorners(mwc, newWindows, mon, monitorRects.at(mon), freeCorners, monitorCornerWindows);
     }
 
     return windowsOrderInCorners;
@@ -483,7 +482,7 @@ static void displayMonitorsAndWindows(std::map<HMONITOR, Rect>& monitorRects, st
     }
 }
 
-static bool detectChangedWindows(std::map<HWND, std::tuple<HMONITOR, Corner, Rect>>& windowMonitor, 
+static bool hasChangedWindows(std::map<HWND, std::tuple<HMONITOR, Corner, Rect>>& windowMonitor, 
                                  std::set<HWND>& newWindows, 
                                  const std::map<HMONITOR, Rect>& monitorRects)
 {
@@ -551,24 +550,23 @@ void arrangeAllWindows(bool force)
         }
 
     // find main monitor for each window
-    map<HWND, tuple<HMONITOR, Corner, Rect>> windowMonitor;
+    map<HWND, tuple<HMONITOR, Corner, Rect>> windowLocations;
     for (auto &[w, r] : windowRects)
     {
         auto [m, c] = findMainMonitorAndCorner(r, monitorRects);
         // if(!monitor) monitor = monitorRects.rbegin()->first; // TODO that would steal space for invisible windows, consider filtering them better because some fall into this category incorrectly
-        if(m) windowMonitor[w] = {m, c, r};
+        if(m) windowLocations[w] = {m, c, r};
         // else
         //     cout << "No monitor for window " << w << endl;
     }
 
     set<HWND> newWindows;
-    bool changed = detectChangedWindows(windowMonitor, newWindows, monitorRects);
-    if(!force && !changed) return;
+    if(!force && !hasChangedWindows(windowLocations, newWindows, monitorRects)) return;
 
     displayMonitorsAndWindows(monitorRects, windowRects);
-    auto windowsOrderInCorners = distributeWindowsInCorners(windowMonitor, newWindows, monitorRects);
+    auto windowsOrderInCorners = distributeWindowsInCorners(windowLocations, newWindows, monitorRects);
 
-    oldWindowMonitor = windowMonitor;
+    oldWindowMonitor = windowLocations;
     adjustWindowsInMonitorCorners(windowsOrderInCorners, monitorRects, windowRects);
     // save window sizes after adjustment for size change detection to remain stable
     for (auto& [w, mcr] : oldWindowMonitor) if (windowRects.contains(w)) get<Rect>(mcr) = windowRects[w];
